@@ -1,0 +1,65 @@
+name: 渲染化学可视化视频
+
+# 触发方式：
+# 1) 手动：Actions 页 -> Run workflow -> 选场景/配置
+# 2) 推代码到 main 自动渲染
+on:
+  workflow_dispatch:
+    inputs:
+      episode:
+        description: '配置文件名（config/ 下，不含 .yaml）'
+        required: true
+        default: 'no2_equilibrium'
+      scene:
+        description: '场景类名'
+        required: true
+        default: 'NO2Equilibrium'
+  push:
+    branches: [main]
+    paths:
+      - 'scenes/**'
+      - 'src/**'
+      - 'config/**'
+      - 'manim.cfg'
+
+env:
+  EPISODE: ${{ github.event.inputs.episode || 'no2_equilibrium' }}
+  SCENE: ${{ github.event.inputs.scene || 'NO2Equilibrium' }}
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: 安装系统依赖（cairo/pango/ffmpeg/中文字体）
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libcairo2-dev libpango1.0-dev ffmpeg fonts-noto-cjk fonts-dejavu-core
+
+      - name: 安装 Python 依赖
+        run: pip install -r requirements.txt
+
+      - name: 渲染竖屏视频（720x1280）
+        run: |
+          SCENE_FILE="scenes/${EPISODE}.py"
+          if [ ! -f "$SCENE_FILE" ]; then
+            echo "场景文件不存在：$SCENE_FILE"; exit 1
+          fi
+          # 用 -r 显式指定竖屏分辨率 + --fps 30；不要加 -q，
+          # 否则质量预设会覆盖成 16:9 横屏。
+          manim -r 720,1280 --fps 30 "$SCENE_FILE" "$SCENE"
+
+      - name: 上传成片
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.EPISODE }}-mp4
+          path: media/videos/**/*.mp4
+          if-no-files-found: error

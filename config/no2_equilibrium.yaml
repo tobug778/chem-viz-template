@@ -1,0 +1,77 @@
+# ============================================================
+# 一期视频的全部可变内容都在这个文件里
+# 换一期：改这里，不动任何 Python 代码
+# 字段说明见 README.md
+# ============================================================
+meta:
+  series: "你没见过的化学"
+  episode_no: "01"
+  title: "化学平衡"
+  hook: "你背了三年的化学平衡，其实长这样"
+  watermark: false          # 全局水印开关：false = 任何画面都不加水印
+
+style:
+  # 原版深色配色（沉稳专业），仅保留调大后的字号
+  bg: "#0A1526"             # 深蓝背景
+  panel: "#132238"          # 深蓝卡片
+  panel_line: "#2E4A6B"     # 描边
+  text: "#EAF2FF"           # 浅色主文字
+  text_dim: "#8FA8C8"       # 次要文字
+  accent: "#FFC857"         # 黄色强调色（标题、结论）
+  no2: "#C1440E"            # NO2 红棕色
+  n2o4: "#9FB2C9"           # N2O4 近无色
+  ox: "#E8552F"             # 氧原子
+  nitro: "#3E6FB0"          # 氮原子
+  font_cn: "Noto Sans CJK SC"
+
+  # 字号参数（Manim font_size，越大越清晰；改这里就能全局调）
+  font_small: 20            # 次要标签、选项
+  font_body: 26             # 正文、提问
+  font_caption: 30          # 底部字幕（重点，已调大）
+  font_accent: 30           # 强调色文字（重点，已调大）
+  font_heading: 38          # 大标题
+  font_formula: 34          # 公式
+  font_formula_long: 26     # 较长公式（防溢出）
+
+# 六段式：每段的文字、公式、时长（秒）、需要的画面组件
+# kind 可选值见 src/components.py 的 builders 映射
+segments:
+  - kind: hook
+    dur: 6
+    eyebrow: "平衡 · 01"
+    line1: "把红棕色的 NO₂"
+    line2: "压到一半，会怎样？"
+
+  - kind: particle
+    dur: 12
+    formula: "2 NO₂  ⇌  N₂O₄"
+    sub: "01  压缩那一瞬间"
+    caption: "红棕色 NO₂ 越来越少，颜色变浅"
+
+  - kind: equilibrium
+    dur: 12
+    question: "平衡了，反应就停止了吗？"
+    formula: "v 正 = v 逆 ≠ 0"
+    caption: "颜色不再变，但分子一刻也没停"
+
+  - kind: bars
+    dur: 14
+    moment: "刚刚压缩的一瞬间"
+    formula: "c(NO₂) ↑  →  c(N₂O₄) ↑"
+    caption: "浓度同时增大，颜色先变深"
+
+  - kind: lechatelier
+    dur: 10
+    label: "勒夏特列原理"
+    line1: "减弱，不是抵消"
+    line2: "平衡只能减弱这种改变"
+    formula: "K = c(N₂O₄) / c²(NO₂) = 2.25"
+
+  - kind: outro
+    dur: 8
+    question: "你选对了吗？"
+    cta: "评论区告诉我"
+
+audio:
+  bgm: "assets/bgm.mp3"     # 可选；文件不存在则静音
+  volume: 0.18
