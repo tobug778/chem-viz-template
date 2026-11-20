@@ -61,9 +61,24 @@ jobs:
           # -r 指定竖屏分辨率 + --fps 30；不要加 -q（会覆盖成 16:9 横屏）。
           EPISODE="$EPISODE" manim -r 720,1280 --fps 30 scenes/episode.py Episode
 
+      - name: 给成片起可读文件名
+        run: |
+          SRC=$(find media/videos -name '*.mp4' -type f | head -1)
+          if [ -z "$SRC" ]; then echo "找不到渲染出的 mp4"; exit 1; fi
+          # 从本期配置读期号与标题（用 python + pyyaml，requirements 已含）
+          EPISODE_NO=$(python3 -c "import yaml;print(yaml.safe_load(open('config/${EPISODE}.yaml',encoding='utf-8'))['meta'].get('episode_no',''))")
+          TITLE=$(python3 -c "import yaml;print(yaml.safe_load(open('config/${EPISODE}.yaml',encoding='utf-8'))['meta'].get('title',''))")
+          # 文件名格式：<期号>_<主题>.mp4，例：04_盐的水解.mp4
+          NAME="${EPISODE_NO}_${TITLE}.mp4"
+          [ -z "$EPISODE_NO" ] && NAME="${TITLE}.mp4"
+          mkdir -p release
+          cp "$SRC" "release/${NAME}"
+          echo "成片文件名：$NAME"
+          echo "VIDEO_NAME=$NAME" >> "$GITHUB_ENV"
+
       - name: 上传成片
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.EPISODE }}-mp4
-          path: media/videos/**/*.mp4
+          path: release/*.mp4
           if-no-files-found: error
