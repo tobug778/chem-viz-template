@@ -1,0 +1,160 @@
+# ============================================================
+# 第 04 期：盐的水解 —— 盐溶于水，溶液一定是中性的吗？
+# 由主题自动生成（chem-viz-episode-builder），仅演示，未切 ACTIVE
+# ============================================================
+# 拆段说明：本期 6 段。含 equilibrium —— 盐的水解本质就是"水解 vs 中和"
+# 的动态平衡，v正/v逆 曲线恰好贴合（与原电池不同，那个是自发放电无平衡）。
+# 末段固定 outro。
+# ============================================================
+meta:
+  series: "你没见过的化学"
+  episode_no: "04"
+  title: "盐的水解"
+  hook: "盐溶在水里，溶液一定中性吗"
+  watermark: false
+
+style:
+  bg: "#0A1526"
+  panel: "#132238"
+  panel_line: "#2E4A6B"
+  text: "#EAF2FF"
+  text_dim: "#8FA8C8"
+  accent: "#FFC857"
+  no2: "#C1440E"
+  n2o4: "#9FB2C9"
+  ox: "#E8552F"
+  nitro: "#3E6FB0"
+  nh3: "#FFC857"
+  font_cn: "Noto Sans CJK SC"
+  font_small: 18
+  font_body: 24
+  font_caption: 24
+  font_accent: 28
+  font_heading: 34
+  font_formula: 30
+  font_formula_long: 22
+
+  rich_text: true
+  highlight_words:
+    - "水解"
+    - "电离"
+    - "弱酸"
+    - "弱碱"
+    - "中性"
+    - "酸性"
+    - "碱性"
+  highlight_color: "#FFC857"
+  gold_outline: "#6B4410"
+  outline_width: 1.5
+  heading_boost: 1.12
+  motion: true
+
+segments:
+  # ---- 01 现象引入：反常识设问 ----
+  - kind: hook
+    dur: 5
+    transition:
+      number: "01"
+      title: "盐都中性吗"
+      en: "ARE ALL SALTS NEUTRAL"
+      dur: 1.6
+    eyebrow: "水解 · 04"
+    line1: "盐溶进水里"
+    line2: "一定中性吗？"
+    gas_color: "nitro"       # 注射器装蓝液体（代表盐溶液）
+
+  # ---- 02 微观视角：离子与水抢 H⁺/OH⁻ ----
+  - kind: particle
+    dur: 12
+    transition:
+      number: "02"
+      title: "离子抢水"
+      en: "IONS GRAB WATER"
+      dur: 1.6
+    formula: "CH₃COO⁻ + H₂O ⇌ CH₃COOH + OH⁻"
+    sub: "02  弱酸根抢走 H⁺"
+    caption: "弱酸根抢水电离的 H⁺，剩下 OH⁻"
+    particles:
+      a:                    # 反应物（弱酸根），反应后减少
+        color: "nitro"
+        radius: 0.055
+        opacity: 0.9
+        normal: 18
+        compressed: 8
+      b:                    # 生成物（弱酸+OH⁻），反应后增多
+        color: "nh3"
+        radius: 0.045
+        opacity: 0.9
+        normal: 8
+        compressed: 20
+
+  # ---- 03 动态平衡：水解 vs 中和 ----
+  - kind: equilibrium
+    dur: 12
+    transition:
+      number: "03"
+      title: "水解也平衡"
+      en: "HYDROLYSIS EQUILIBRIUM"
+      dur: 1.6
+    curve_anim: true
+    curve_grow: 5.0
+    curve_stages:
+      - {at: 0.0,  text: "刚开始 · 水解快，中和几乎没有"}
+      - {at: 0.42, text: "进行中 · 水解变慢，中和变快"}
+      - {at: 0.85, text: "达平衡 · 水解 = 中和 ≠ 0"}
+    question: "水解会一直进行下去吗？"
+    formula: "v 水解 = v 中和 ≠ 0"
+    caption: "水解与中和速率相等，是动态平衡"
+
+  # ---- 04 量化结果：盐溶液酸碱性对比 ----
+  - kind: bars
+    dur: 14
+    transition:
+      number: "04"
+      title: "盐分酸碱"
+      en: "SALTS SPLIT ACID BASE"
+      dur: 1.6
+    bar_anim: true
+    bar_grow: 0.9
+    moment: "不同盐溶液的 pH"
+    formula: "谁弱谁水解 · 谁强显谁性"
+    caption: "强酸弱碱盐酸性，强碱弱酸盐碱性"
+    # 三阶段：[标签, 酸性强度, 碱性强度]
+    bar_stages:
+      - ["强酸强碱盐", 1.0, 1.0]
+      - ["强酸弱碱盐", 2.0, 0.4]
+      - ["强碱弱酸盐", 0.4, 2.0]
+    bar_swatches: ["nitro", "nh3", "ox"]
+    bar_color_a: "ox"        # 酸性柱（橙红）
+    bar_color_b: "nitro"     # 碱性柱（蓝）
+
+  # ---- 05 规律原理：谁弱谁水解，谁强显谁性 ----
+  - kind: lechatelier
+    dur: 9
+    transition:
+      number: "05"
+      title: "谁弱谁水解"
+      en: "THE WEAKER HYDROLYZES"
+      dur: 1.6
+    label: "盐类水解规律"
+    line1: "谁弱谁水解"
+    line2: "谁强显谁性 · 都强显中性"
+    formula: "弱酸根 + H₂O ⇌ 弱酸 + OH⁻"
+
+  # ---- 06 末段 互动测验（固定）----
+  - kind: outro
+    dur: 6
+    transition:
+      number: "06"
+      title: "轮到你了"
+      en: "YOUR TURN"
+      dur: 1.6
+    question: "醋酸钠溶液，显什么性？"
+    opt_a: "A  酸性"
+    opt_b: "B  碱性"
+    cta: "评论区告诉我"
+
+audio:
+  enabled: false
+  bgm: "assets/bgm.mp3"
+  volume: 0.18

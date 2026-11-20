@@ -1,0 +1,140 @@
+# ============================================================
+# 第 03 期：原电池 —— 两块金属，怎么就发出了电
+# 由主题自动生成（chem-viz-episode-builder），仅演示，未切 ACTIVE
+# 只改这个文件，不动任何 Python 代码
+#
+# 拆段说明：本期 5 段（删掉 equilibrium —— 原电池是自发放电，
+# 没有"正逆速率相等"的平衡曲线，硬套会讲错化学）。末段固定 outro。
+# ============================================================
+meta:
+  series: "你没见过的化学"
+  episode_no: "03"
+  title: "原电池"
+  hook: "不用电池，两块金属也能发电"
+  watermark: false
+
+style:
+  bg: "#0A1526"
+  panel: "#132238"
+  panel_line: "#2E4A6B"
+  text: "#EAF2FF"
+  text_dim: "#8FA8C8"
+  accent: "#FFC857"
+  no2: "#C1440E"
+  n2o4: "#9FB2C9"           # 锌极（银灰）
+  ox: "#E8552F"             # 铜极（紫红）
+  nitro: "#3E6FB0"
+  nh3: "#FFC857"
+  font_cn: "Noto Sans CJK SC"
+  font_small: 18
+  font_body: 24
+  font_caption: 24
+  font_accent: 28
+  font_heading: 34
+  font_formula: 30
+  font_formula_long: 22
+
+  rich_text: true
+  highlight_words:            # 本期关键词：正文白字，这些词染金
+    - "化学能"
+    - "电子"
+    - "闭合回路"
+    - "锌极"
+    - "铜极"
+  highlight_color: "#FFC857"
+  gold_outline: "#6B4410"
+  outline_width: 1.5
+  heading_boost: 1.12
+  motion: true
+
+segments:
+  # ---- 01 现象引入：反常识设问 ----
+  - kind: hook
+    dur: 5
+    transition:
+      number: "01"
+      title: "金属会发电"
+      en: "METALS MAKE POWER"
+      dur: 1.6
+    eyebrow: "原电池 · 03"
+    line1: "两块金属插进溶液"
+    line2: "怎么就发了电？"
+    gas_color: "ox"          # 注射器改橙红液体（硫酸铜溶液）
+
+  # ---- 02 微观视角：电子转移，锌溶铜析 ----
+  - kind: particle
+    dur: 12
+    transition:
+      number: "02"
+      title: "电子往哪走"
+      en: "WHERE ELECTRONS GO"
+      dur: 1.6
+    formula: "Zn + Cu²⁺ → Zn²⁺ + Cu"
+    sub: "02  反应发生前后"
+    caption: "电子转移，锌溶铜析"
+    particles:
+      a:                    # 反应物粒子（锌原子+铜离子），反应后减少
+        color: "nitro"
+        radius: 0.055
+        opacity: 0.9
+        normal: 18
+        compressed: 8
+      b:                    # 生成物粒子（锌离子+铜原子），反应后增多
+        color: "nh3"
+        radius: 0.045
+        opacity: 0.9
+        normal: 8
+        compressed: 20
+
+  # ---- 03 量化结果：两极质量此消彼长 ----
+  - kind: bars
+    dur: 14
+    transition:
+      number: "03"
+      title: "此消彼长"
+      en: "ONE UP ONE DOWN"
+      dur: 1.6
+    bar_anim: true
+    bar_grow: 0.9
+    moment: "放电过程中"
+    formula: "m(Zn) ↓  →  m(Cu) ↑"
+    caption: "锌极溶解变轻，铜极析出变重"
+    # 三阶段：[标签, 锌极质量柱, 铜极质量柱]
+    bar_stages:
+      - ["刚开始", 2.0, 0.35]
+      - ["反应中", 1.2, 1.15]
+      - ["反应后", 0.45, 2.0]
+    bar_swatches: ["nitro", "nh3", "ox"]
+    bar_color_a: "n2o4"      # 锌极柱（银灰）
+    bar_color_b: "ox"        # 铜极柱（紫红）
+
+  # ---- 04 规律原理：构成条件（标题写实质，不空喊名词）----
+  - kind: lechatelier
+    dur: 9
+    transition:
+      number: "04"
+      title: "缺一不可"
+      en: "ALL CONDITIONS MATTER"
+      dur: 1.6
+    label: "原电池的构成条件"
+    line1: "两极 · 一液 · 一回路"
+    line2: "活泼性不同 + 闭合回路 + 自发氧化还原"
+    formula: "Zn−2e⁻→Zn²⁺ ｜ Cu²⁺+2e⁻→Cu"
+
+  # ---- 05 末段 互动测验（固定）----
+  - kind: outro
+    dur: 6
+    transition:
+      number: "05"
+      title: "轮到你了"
+      en: "YOUR TURN"
+      dur: 1.6
+    question: "哪个装置能产生电流？"
+    opt_a: "A  锌铜插稀硫酸"
+    opt_b: "B  两块铜插酒精"
+    cta: "评论区告诉我"
+
+audio:
+  enabled: false
+  bgm: "assets/bgm.mp3"
+  volume: 0.18
