@@ -158,3 +158,18 @@ print("所有 wait 时长:", [round(w, 2) for w in waits])
 assert all(w > 0 for w in waits), "存在 0/负 wait，stay 又被跳过了"
 
 print("\n✅ 6 环就位 / 时长恢复 ~58s / stay 不再被跳过 / 第一期不受影响")
+
+# --- 回归：字幕叠字修复 ---
+# caption_chars 必须与 caption 共用同一个整句 Text（原生 t2c 高亮）。
+# 一旦退回"每字独立 Text + arrange 重排"，中文字符 bearing 会让金/白字错位叠字。
+import components as comp
+os.environ["EPISODE"] = "salt_hydrolysis"
+cfg_salt = ep.load_config("salt_hydrolysis")
+comp.configure_rich(cfg_salt["style"])
+SAMPLE = "弱酸根抢水电离的 H⁺，剩下 OH⁻"
+cap_plain = comp.caption(cfg_salt, SAMPLE)
+cap_chars = comp.caption_chars(cfg_salt, SAMPLE)
+assert type(cap_chars) is type(cap_plain), \
+    "caption_chars 必须与 caption 同为整句 Text，不能是逐字 VGroup（叠字根因）"
+assert getattr(cap_chars, "t", None) == SAMPLE, "字幕文本应保持完整整句"
+print("字幕整句 Text（无逐字重排/叠字）✅")

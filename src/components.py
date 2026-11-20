@@ -154,47 +154,26 @@ def progress_fill(cfg, fraction):
 
 
 def caption(cfg, text):
+    """字幕：整句一次排版 + Manim 原生 t2c 高亮（白字正文 + 金黄高亮词）。
+
+    关键修复：字幕必须是一个整句 Text，不能手工按字拆开再 arrange ——
+    单个中文字符 Text 的宽度含字体 bearing，逐字重排后高亮字与正文字会
+    水平错位、叠成金/白两行。整句排版从根上杜绝叠字。
+    """
     s = cfg["style"]
-    # 白字正文 + 金黄高亮词（同色系深浅），关键词由 txt() 内的 t2c 自动染色。
-    t = txt(text, _fs(s,"font_caption",30), _color(s, "text"))
+    t = txt(text, _fs(s, "font_caption", 30), _color(s, "text"))
     t.move_to([0, BOTTOM_Y + 0.12, 0])
     return t
 
 
 def caption_chars(cfg, text):
-    """字幕按字符拆成独立 Text，供 reveal() 做逐字浮现（打字机效果）。
-    属于高亮词的字符用 highlight_color 染色，兼容富文字特效。
+    """逐字浮现用的字幕，与 caption() 共用同一个整句 Text。
+
+    Manim 的 Text.submobjects 本身就是逐字符的，reveal() 直接对这层原生
+    子件做 LaggedStart(FadeIn) 即可打字机效果；t2c 高亮由 Manim 原生处理。
+    不再手工 Text(ch)+arrange —— 那是金/白两层错位的根因。
     """
-    s = cfg["style"]
-    size = _fs(s, "font_caption", 30)
-    # 参考图逻辑：正文白字（浅），关键词金黄（深），靠同色系深浅区分。
-    base_color = _color(s, "text")
-    hi_color = s.get("highlight_color", _color(s, "accent")) if _RICH["enabled"] else base_color
-
-    # 标出哪些位置属于高亮词
-    hi_mask = [False] * len(text)
-    if _RICH["enabled"]:
-        for word in _RICH["words"]:
-            if not word:
-                continue
-            start = 0
-            while True:
-                idx = text.find(word, start)
-                if idx < 0:
-                    break
-                for k in range(idx, idx + len(word)):
-                    if k < len(hi_mask):
-                        hi_mask[k] = True
-                start = idx + len(word)
-
-    group = VGroup()
-    for i, ch in enumerate(text):
-        c = Text(ch, font=FONT_STACK, font_size=size,
-                 color=hi_color if hi_mask[i] else base_color,
-                 weight="BOLD")
-        group.add(c)
-    group.arrange(RIGHT, buff=0.0).move_to([0, BOTTOM_Y + 0.12, 0])
-    return group
+    return caption(cfg, text)
 
 
 def hook(cfg, seg):
