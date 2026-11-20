@@ -9,7 +9,7 @@ import numpy as np
 from manim import (
     VGroup, Text, Dot, Rectangle, RoundedRectangle, Line,
     DashedLine, VMobject, UP, DOWN, LEFT, RIGHT,
-    FadeIn, LaggedStart,
+    FadeIn, LaggedStart, ValueTracker, always_redraw,
 )
 
 from theme import FONT_STACK, SAFE_W, TOP_Y, BOTTOM_Y
@@ -287,6 +287,114 @@ def equilibrium(cfg, seg):
     formula.move_to([0, -2.15, 0])
     g.add(q, ax, fwd, rev, eqline, formula)
     return g
+
+
+# ---------- 动态 v-t 曲线（平衡段，配置开关 curve_anim）----------
+def _vt_curve_points(kind, n=140):
+    """正/逆反应速率曲线采样点（Manim 坐标）。
+    v正 从高位指数衰减到平衡线；v逆 从低位指数上升到平衡线；末端汇合于 y_eq。
+    """
+    y_eq = -0.115
+    x0, x1 = -1.5, 1.45
+    if kind == "fwd":
+        amp, k, sign = 1.115, 2.3, 1.0      # 从 y=1.0 降到 y_eq
+    else:
+        amp, k, sign = 0.985, 2.8, -1.0     # 从 y=-1.1 升到 y_eq
+    pts = []
+    for i in range(n):
+        x = x0 + (x1 - x0) * i / (n - 1)
+        y = y_eq + sign * amp * np.exp(-k * (x - x0))
+        pts.append(np.array([x, y, 0.0]))
+    return pts
+
+
+def _vt_partial(pts, alpha):
+    """按 alpha∈[0,1] 取曲线前缀，末端线性插值，让"生长"连续不跳。"""
+    a = max(0.0, min(1.0, float(alpha)))
+    total = len(pts) - 1
+    f = a * total
+    i = int(f)
+    if i >= total:
+        return list(pts)
+    frac = f - i
+    head = list(pts[:i + 1])
+    if frac > 1e-6:
+        head.append(pts[i] * (1 - frac) + pts[i + 1] * frac)
+    return head
+
+
+def _vt_curve(pts, color, width=3.2):
+    """点列 -> VMobject 曲线。点数少用折线，多点用平滑，避免 set_points_smoothly 报错。"""
+    m = VMobject(stroke_color=color, stroke_width=width)
+    arr = [np.array(p) for p in pts]
+    if len(arr) >= 4:
+        m.set_points_smoothly(arr)
+    elif len(arr) >= 2:
+        m.set_points_as_corners(arr)
+    return m
+
+
+def equilibrium_anim(cfg, seg):
+    """平衡段动态版：曲线随时间从左侧"长"出来，末端光点与 v正/v逆 文字跟随，
+    阶段文字随进度切换。参考启源化学的 v-t 图。
+
+    返回 (static, alpha, dynamic)：
+      - static:   坐标轴 / 平衡虚线 / 问题 / 公式（一次淡入）
+      - alpha:    ValueTracker(0→1) 驱动生长
+      - dynamic:  always_redraw 对象列表，加入场景后随 alpha 自动更新
+    配置：curve_anim: true, curve_grow: 秒数, curve_stages: [{at, text}, ...]
+    """
+    s = cfg["style"]
+    q = txt(seg["question"], _fs(s, "font_body", 26), _color(s, "text"), bold=True)
+    q.move_to([0, 2.4, 0])
+    ax = VGroup(
+        Line([-1.6, -1.2, 0], [-1.6, 1.2, 0], stroke_width=1.5, color=_color(s, "text_dim")),
+        Line([-1.6, -1.2, 0], [1.6, -1.2, 0], stroke_width=1.5, color=_color(s, "text_dim")),
+    )
+    eqline = DashedLineLike(-0.115, _color(s, "accent"))
+    formula = txt(seg["formula"], _fs(s, "font_formula", 34), _color(s, "accent"), bold=True)
+    formula.move_to([0, -2.15, 0])
+    static = VGroup(q, ax, eqline, formula)
+
+    fwd_pts = _vt_curve_points("fwd")
+    rev_pts = _vt_curve_points("rev")
+    col_f = _color(s, "accent")    # v正 金黄
+    col_r = _color(s, "nitro")     # v逆 蓝（图表编码，与参考片一致）
+    small = _fs(s, "font_small", 20)
+
+    alpha = ValueTracker(0.0)
+
+    fwd_curve = always_redraw(lambda: _vt_curve(_vt_partial(fwd_pts, alpha.get_value()), col_f))
+    rev_curve = always_redraw(lambda: _vt_curve(_vt_partial(rev_pts, alpha.get_value()), col_r))
+
+    fwd_dot = always_redraw(lambda: Dot(
+        point=_vt_partial(fwd_pts, alpha.get_value())[-1],
+        radius=0.055, color=col_f))
+    rev_dot = always_redraw(lambda: Dot(
+        point=_vt_partial(rev_pts, alpha.get_value())[-1],
+        radius=0.055, color=col_r))
+
+    # v正 / v逆 标签跟随各自曲线末端；汇合点上下错开，避免叠字
+    fwd_lab = always_redraw(lambda: txt("v正", small, col_f, bold=True).move_to(
+        _vt_partial(fwd_pts, alpha.get_value())[-1] + np.array([0.34, 0.17, 0.0])))
+    rev_lab = always_redraw(lambda: txt("v逆", small, col_r, bold=True).move_to(
+        _vt_partial(rev_pts, alpha.get_value())[-1] + np.array([0.34, -0.30, 0.0])))
+
+    dynamic = [fwd_curve, rev_curve, fwd_dot, rev_dot, fwd_lab, rev_lab]
+
+    # 可选：阶段文字，随进度切换（"反应刚开始 → 趋向平衡 → 达到平衡"）
+    stages = seg.get("curve_stages", [])
+    if stages:
+        def _stage_now():
+            a = alpha.get_value()
+            cur = stages[0].get("text", "")
+            for st in stages:
+                if a >= float(st.get("at", 0.0)):
+                    cur = st.get("text", "")
+            return txt(cur, small, _color(s, "text_dim")).move_to([0, -1.62, 0])
+        dynamic.append(always_redraw(_stage_now))
+
+    return static, alpha, dynamic
 
 
 def bars(cfg, seg):

@@ -16,12 +16,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
-from manim import Scene, FadeIn, FadeOut, Transform, UP
+from manim import Scene, FadeIn, FadeOut, Transform, UP, linear
 
 from theme import load_config
 from components import (
     BUILDERS, top_bar, progress_track, progress_fill, caption, caption_chars,
-    particle_panel, configure_rich, configure_motion, reveal,
+    particle_panel, equilibrium_anim, configure_rich, configure_motion, reveal,
 )
 from components import _MOTION
 
@@ -92,6 +92,25 @@ class Episode(Scene):
                 remain = dur - hold - 1.0
                 self.wait(max(0.2, remain))
                 elapsed += max(0.2, remain)
+
+            elif kind == "equilibrium" and seg.get("curve_anim", False):
+                # 动态 v-t 曲线：先淡入骨架，再让曲线随进度从左侧"长"出来，
+                # 末端光点 + v正/v逆 标签 + 阶段文字全程跟随（参考启源化学）。
+                static, alpha, dynamic = equilibrium_anim(cfg, seg)
+                reveal(self, static, run_time=T_IN)
+                seg_objects.append(static)
+                elapsed += T_IN
+                # always_redraw 对象用 add 常驻，由 alpha 驱动持续更新（不能用 FadeIn）
+                for o in dynamic:
+                    self.add(o)
+                    seg_objects.append(o)
+
+                grow = float(seg.get("curve_grow", 5.0))
+                self.play(alpha.animate.set_value(1.0), run_time=grow, rate_func=linear)
+                elapsed += grow
+                stay = dur - T_IN - grow - T_X - T_FADE
+                self.wait(max(0.2, stay))
+                elapsed += max(0.2, stay)
             else:
                 visual = BUILDERS[kind](cfg, seg)
                 reveal(self, visual, run_time=T_IN)
@@ -127,6 +146,10 @@ class Episode(Scene):
             if i < len(segs) - 1:
                 to_remove = list(seg_objects)
                 if to_remove:
+                    # always_redraw 对象带 updater，先停更新再淡出，避免残留/淡出被重置
+                    for o in to_remove:
+                        if hasattr(o, "clear_updaters"):
+                            o.clear_updaters()
                     self.play(*[FadeOut(o) for o in to_remove], run_time=T_FADE)
                     elapsed += T_FADE
                     self.remove(*to_remove)

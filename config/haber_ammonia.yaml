@@ -84,6 +84,14 @@ segments:
 
   - kind: equilibrium
     dur: 12
+    # 动态 v-t 曲线：曲线随时间从左侧"长"出来，末端光点 + v正/v逆 文字跟随，
+    # 阶段文字随进度切换（参考启源化学）。设 false 则回到静态整图。
+    curve_anim: true
+    curve_grow: 5.0            # 曲线生长动画时长（秒）
+    curve_stages:              # 随进度切换的跟随标注（at 为 0~1 的生长进度）
+      - {at: 0.0,  text: "反应刚开始 · v正 最大，v逆 ≈ 0"}
+      - {at: 0.42, text: "趋向平衡 · v正 下降，v逆 上升"}
+      - {at: 0.85, text: "达到平衡 · v正 = v逆 ≠ 0"}
     question: "平衡了，反应就停止了吗？"
     formula: "v 正 = v 逆 ≠ 0"
     caption: "分子仍在反应，只是正逆速率相等"
