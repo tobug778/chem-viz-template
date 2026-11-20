@@ -18,6 +18,10 @@ on:
       - 'config/**'
       - 'manim.cfg'
 
+# 发布到 Releases 需要写权限（固定下载入口）
+permissions:
+  contents: write
+
 jobs:
   render:
     runs-on: ubuntu-latest
@@ -73,10 +77,65 @@ jobs:
           [ -z "$EPISODE_NO" ] && NAME="${TITLE}.mp4"
           mkdir -p release
           cp "$SRC" "release/${NAME}"
+          # 固定名副本：让直链长期不变（网页上仍能按可读名下载）
+          cp "$SRC" "release/latest.mp4"
           echo "成片文件名：$NAME"
           echo "VIDEO_NAME=$NAME" >> "$GITHUB_ENV"
+          echo "EPISODE_NO=$EPISODE_NO" >> "$GITHUB_ENV"
+          echo "TITLE=$TITLE" >> "$GITHUB_ENV"
 
-      - name: 上传成片
+      # 固定下载入口：每次渲染都更新同一个 release（tag=latest）。
+      # 用户在浏览器收藏这一个网址即可，永远是最新成片，不用翻 run 列表。
+      - name: 清理固定入口里的旧成片（只留最新一期）
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          curl -s -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/tags/latest" \
+            > /tmp/latest_release.json || true
+          python3 - <<'PY'
+          import json, os, urllib.request
+          token = os.environ.get("GH_TOKEN", "")
+          try:
+              d = json.load(open("/tmp/latest_release.json"))
+              assets = d.get("assets", [])
+          except Exception:
+              assets = []
+          for a in assets:
+              req = urllib.request.Request(a["url"], method="DELETE")
+              req.add_header("Authorization", "Bearer " + token)
+              req.add_header("Accept", "application/vnd.github+json")
+              try:
+                  urllib.request.urlopen(req)
+                  print("已删除旧文件:", a.get("name"))
+              except Exception as e:
+                  print("跳过:", a.get("name"), e)
+          PY
+
+      - name: 发布到固定下载入口（Releases/latest）
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: 最新成片 · ${{ env.EPISODE_NO }} ${{ env.TITLE }}
+          body: |
+            ## 固定下载入口（收藏本页即可，每次渲染后自动更新）
+
+            当前最新成片：**${{ env.VIDEO_NAME }}**
+
+            - 网页下载：打开本页，点下方 `Assets` 里的 mp4 即可下载
+            - 直链（可当书签）：`https://github.com/${{ github.repository }}/releases/latest/download/${{ env.VIDEO_NAME }}`
+            - 备用固定直链（文件名恒定）：`https://github.com/${{ github.repository }}/releases/latest/download/latest.mp4`
+
+            每期文件名按期号+主题命名（如 `04_盐的水解.mp4`）；`latest.mp4` 是同一个文件的固定名副本，方便脚本/书签长期引用。
+          files: |
+            release/${{ env.VIDEO_NAME }}
+            release/latest.mp4
+          overwrite_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 上传成片（Artifact 备用）
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.EPISODE }}-mp4
