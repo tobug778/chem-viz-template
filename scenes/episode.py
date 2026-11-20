@@ -41,58 +41,82 @@ class Episode(Scene):
     def construct(self):
         name = _active_episode()
         cfg = load_config(name)
-        s = cfg["style"]
 
+        # ---- 常驻元素：顶栏 + 进度条底轨（全程不清除）----
         header = top_bar(cfg)
         track = progress_track(cfg)
         self.add(header, track)
 
+        # ---- BGM：文件存在才配音（无文件则静音）----
         bgm = ROOT / cfg["audio"]["bgm"]
         if bgm.exists():
             self.add_sound(str(bgm), gain=cfg["audio"].get("volume", 0.18))
 
         segs = cfg["segments"]
         total = sum(x["dur"] for x in segs)
-        elapsed = 0
-        cap = None
-        fill = None
+        elapsed = 0.0            # 已真实消耗的动画时间（秒）
+        fill = None              # 当前进度条填充对象
+        seg_objects = []         # 本段临时对象，切段时全部清除
+
+        # 转场开销：入场上字幕 + 字幕 + 进度 + 退场（秒）
+        T_IN, T_X, T_FADE = 0.5, 0.25, 0.3
 
         for i, seg in enumerate(segs):
             kind = seg["kind"]
+            dur = seg["dur"]
 
+            # ---- 1. 画面主体 ----
             if kind == "particle":
                 visual = particle_panel(cfg, seg, compressed=False)
-                self.play(FadeIn(visual, shift=0.15 * UP), run_time=0.6)
-                self.wait(seg["dur"] * 0.45)
+                self.play(FadeIn(visual, shift=0.12 * UP), run_time=T_IN)
+                seg_objects.append(visual)
+                elapsed += T_IN
+
+                # 前半段静止观察，后半段压缩变形
+                hold = dur * 0.45
+                self.wait(max(0.2, hold - T_IN))
+                elapsed += max(0.2, hold - T_IN)
+
                 compressed = particle_panel(cfg, seg, compressed=True)
-                self.play(Transform(visual, compressed), run_time=1.2)
-                elapsed += seg["dur"] * 0.45 + 1.2
-                remain = seg["dur"] - (seg["dur"] * 0.45 + 1.2)
-                self.wait(max(0.2, remain))
+                self.play(Transform(visual, compressed), run_time=1.0)
+                elapsed += 1.0
                 visual = compressed
+                remain = dur - hold - 1.0
+                self.wait(max(0.2, remain))
+                elapsed += max(0.2, remain)
             else:
                 visual = BUILDERS[kind](cfg, seg)
-                self.play(FadeIn(visual, shift=0.12 * UP), run_time=0.6)
-                self.wait(max(0.2, seg["dur"] - 0.6))
-                elapsed += seg["dur"]
+                self.play(FadeIn(visual, shift=0.1 * UP), run_time=T_IN)
+                seg_objects.append(visual)
+                elapsed += T_IN
+                stay = dur - T_IN - T_X - T_FADE
+                self.wait(max(0.2, stay))
+                elapsed += max(0.2, stay)
 
+            # ---- 2. 字幕：每段全新对象，退场时一起清掉 ----
             if seg.get("caption"):
                 new_cap = caption(cfg, seg["caption"])
-                if cap is None:
-                    cap = new_cap
-                    self.play(FadeIn(cap), run_time=0.3)
-                else:
-                    self.play(Transform(cap, new_cap), run_time=0.3)
+                self.play(FadeIn(new_cap), run_time=T_X)
+                seg_objects.append(new_cap)
+                elapsed += T_X
 
+            # ---- 3. 进度条 ----
             fraction = min(1.0, elapsed / total)
             new_fill = progress_fill(cfg, fraction)
             if fill is None:
                 fill = new_fill
                 self.add(fill)
             else:
-                self.play(Transform(fill, new_fill), run_time=0.3)
+                self.play(Transform(fill, new_fill), run_time=T_X)
+                elapsed += T_X
 
+            # ---- 4. 退场：清空本段所有临时对象（关键修复：杜绝残留叠加）----
             if i < len(segs) - 1:
-                self.play(FadeOut(visual), run_time=0.4)
+                to_remove = list(seg_objects)
+                if to_remove:
+                    self.play(*[FadeOut(o) for o in to_remove], run_time=T_FADE)
+                    elapsed += T_FADE
+                    self.remove(*to_remove)
+                seg_objects = []
 
-        self.wait(0.8)
+        self.wait(0.5)

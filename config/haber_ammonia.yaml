@@ -25,20 +25,20 @@ style:
   nh3: "#FFC857"            # NH3 氨（强调黄）
   font_cn: "Noto Sans CJK SC"
 
-  font_small: 20
-  font_body: 26
-  font_caption: 30
-  font_accent: 30
-  font_heading: 38
-  font_formula: 34
-  font_formula_long: 26
+  font_small: 18
+  font_body: 24
+  font_caption: 24
+  font_accent: 28
+  font_heading: 34
+  font_formula: 30
+  font_formula_long: 22
 
 segments:
   - kind: hook
-    dur: 6
+    dur: 5
     eyebrow: "平衡 · 02"
     line1: "把氮气和氢气"
-    line2: "压到 200 个大气压，会怎样？"
+    line2: "压到 200 个大气压？"
     gas_color: "nitro"      # 注射器里气体改蓝色（代表 N2/H2 混合气）
 
   - kind: particle
@@ -80,15 +80,15 @@ segments:
     bar_color_b: "nh3"      # 生成物柱（黄）
 
   - kind: lechatelier
-    dur: 10
+    dur: 9
     label: "勒夏特列原理"
     line1: "减弱，不是抵消"
-    line2: "加压 → 平衡往气体分子数少的方向移动"
+    line2: "加压 → 往气体少的方向移动"
     formula: "K = c²(NH₃) / [c(N₂) · c³(H₂)]"
 
   - kind: outro
-    dur: 8
-    question: "增大压强，氨的产率怎么变？"
+    dur: 6
+    question: "加压，氨产率怎么变？"
     opt_a: "A  提高"
     opt_b: "B  降低"
     cta: "评论区告诉我"

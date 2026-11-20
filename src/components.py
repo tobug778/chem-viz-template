@@ -23,8 +23,12 @@ def _fs(style, key, default):
     return style.get(key, default)
 
 
-def txt(text, size, color, bold=False):
-    """统一文字工厂：指定字体栈，避免不同系统缺字。"""
+def txt(text, size, color, bold=False, max_width=None):
+    """统一文字工厂：指定字体栈，避免不同系统缺字。
+
+    max_width 为 None 时用安全宽度 SAFE_W；超宽自动等比缩小，
+    从根本上杜绝长句被竖屏右边缘裁切。
+    """
     t = Text(
         text,
         font=FONT_STACK,
@@ -32,6 +36,9 @@ def txt(text, size, color, bold=False):
         color=color,
         weight="BOLD" if bold else "NORMAL",
     )
+    limit = SAFE_W if max_width is None else max_width
+    if hasattr(t, "width") and t.width > limit:
+        t.scale_to_fit_width(limit)
     return t
 
 
