@@ -258,31 +258,31 @@ def _scale_color(hex_color, factor):
 
 
 def _atom(pos, radius, color, opacity=1.0, glow=True):
-    """立体光泽球：外发光晕 + 边缘暗化环 + 主体 + 下方环境反光 + 左上双层高光。
-    参考启源化学分子图：每个原子球带柔和辉光、有体积感，不是纯色扁圆。
-    pos 为 (x,y)。返回 VGroup（不再是单个 Dot），FadeOut/Transform 同样适用。"""
+    """参考图质感的原子球：饱和彩色主体 + 暗轮廓 + 针尖高光 + 贴球柔光晕。
+
+    关键（避免"太亮/塑料"）：
+      - 球身是饱和彩色，绝不叠"下方提亮反光层"（那会把球下半部照白）；
+      - 高光只有左上一个很小的柔点（针尖），不是大块白斑；
+      - 光晕紧贴球、很淡，是氛围而非发光灯泡。
+    pos 为 (x,y)。返回 VGroup，FadeOut/Transform 同样适用。"""
     x, y = pos[0], pos[1]
     g = VGroup()
-    # 外发光晕（大而淡的同色圆，营造参考图那种"发光分子"氛围）
+    # 贴球柔光晕：紧贴球的一层淡彩光（参考图那种柔和氛围，不是外扩大亮圈）
     if glow:
-        g.add(Dot(point=[x, y, 0.0], radius=radius * 1.85,
-                  color=color, fill_opacity=0.10 * opacity))
         g.add(Dot(point=[x, y, 0.0], radius=radius * 1.42,
-                  color=color, fill_opacity=0.14 * opacity))
-    # 边缘暗化 + 轻微投影（让球从面板里"凸"出来）
-    g.add(Dot(point=[x, y - radius * 0.06, 0.0], radius=radius * 1.10,
-              color=_scale_color(color, 0.40), fill_opacity=0.9 * opacity))
-    # 主体球
+                  color=color, fill_opacity=0.09 * opacity))
+        g.add(Dot(point=[x, y, 0.0], radius=radius * 1.18,
+                  color=color, fill_opacity=0.11 * opacity))
+    # 暗轮廓：让球从面板里"凸"出来（下半部略暗，不做提亮反光）
+    g.add(Dot(point=[x, y - radius * 0.05, 0.0], radius=radius * 1.06,
+              color=_scale_color(color, 0.48), fill_opacity=0.85 * opacity))
+    # 主体球：饱和彩色，是画面的绝对主导
     g.add(Dot(point=[x, y, 0.0], radius=radius, color=color, fill_opacity=opacity))
-    # 下方环境反光（很淡，模拟地面反射）
-    g.add(Dot(point=[x + radius * 0.18, y - radius * 0.34, 0.0],
-              radius=radius * 0.46, color=_scale_color(color, 1.28),
-              fill_opacity=0.18 * opacity))
-    # 左上软高光 + 高光核心亮点（玻璃/树脂质感的关键）
-    g.add(Dot(point=[x - radius * 0.30, y + radius * 0.32, 0.0],
-              radius=radius * 0.38, color="#FFFFFF", fill_opacity=0.45 * opacity))
-    g.add(Dot(point=[x - radius * 0.34, y + radius * 0.38, 0.0],
-              radius=radius * 0.14, color="#FFFFFF", fill_opacity=0.95 * opacity))
+    # 针尖高光：左上两个很小的柔白点，仅提示球面弧度，不刺眼
+    g.add(Dot(point=[x - radius * 0.33, y + radius * 0.36, 0.0],
+              radius=radius * 0.20, color="#FFFFFF", fill_opacity=0.22 * opacity))
+    g.add(Dot(point=[x - radius * 0.35, y + radius * 0.38, 0.0],
+              radius=radius * 0.08, color="#FFFFFF", fill_opacity=0.62 * opacity))
     return g
 
 
@@ -344,10 +344,10 @@ def micro_process(cfg, seg):
     并把可动部件（水的某个 H、高亮圈、产物标签）挂到 group 属性上供动画引用。
     """
     s = cfg["style"]
-    col_o = _color(s, "ox")       # 氧：橙红
-    col_c = _color(s, "n2o4")     # 碳：灰蓝
-    col_h = _color(s, "text")     # 氢：白
-    col_neg = _color(s, "nitro")  # 负电荷：蓝
+    col_o = _color(s, "ox")         # 氧：橙红（饱和彩色，参考图风格）
+    col_c = _color(s, "n2o4")       # 碳：灰蓝
+    col_h = _color(s, "nitro")      # 氢：饱和蓝（参考图彩色球，不再是刺眼白球）
+    col_neg = _color(s, "nitro")    # 负电荷：蓝
     small = _fs(s, "font_small", 18)
 
     panel = Rectangle(
