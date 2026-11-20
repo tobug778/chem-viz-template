@@ -16,12 +16,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
-from manim import Scene, FadeIn, FadeOut, Transform, UP, linear
+from manim import (Scene, FadeIn, FadeOut, Transform, LaggedStart, UP, DOWN, linear,
+                   GrowFromEdge, Rotate, Create)
 
 from theme import load_config
 from components import (
     BUILDERS, top_bar, progress_track, progress_fill, caption, caption_chars,
-    particle_panel, equilibrium_anim, configure_rich, configure_motion, reveal,
+    particle_panel, equilibrium_anim, bars_anim_parts, chapter_transition,
+    configure_rich, configure_motion, reveal,
 )
 from components import _MOTION
 
@@ -73,54 +75,92 @@ class Episode(Scene):
             kind = seg["kind"]
             dur = seg["dur"]
 
-            # ---- 1. 画面主体 ----
+            # ---- 1. 画面主体（只做入场与"变化"动画，不在此处 wait）----
+            # 关键节奏修复：字幕要紧跟画面立即出现，等待统一放到字幕之后，
+            # 否则会出现"画面出来了，文字要等好几秒才冒出来"的拖沓感。
             if kind == "particle":
                 visual = particle_panel(cfg, seg, compressed=False)
                 reveal(self, visual, run_time=T_IN)
                 seg_objects.append(visual)
                 elapsed += T_IN
-
-                # 前半段静止观察，后半段压缩变形
-                hold = dur * 0.45
-                self.wait(max(0.2, hold - T_IN))
-                elapsed += max(0.2, hold - T_IN)
-
-                compressed = particle_panel(cfg, seg, compressed=True)
-                self.play(Transform(visual, compressed), run_time=1.0)
-                elapsed += 1.0
-                visual = compressed
-                remain = dur - hold - 1.0
-                self.wait(max(0.2, remain))
-                elapsed += max(0.2, remain)
+                # 压缩变形放在字幕之后执行（见下方 particle 延后动作）
+                pending = "particle"
 
             elif kind == "equilibrium" and seg.get("curve_anim", False):
-                # 动态 v-t 曲线：先淡入骨架，再让曲线随进度从左侧"长"出来，
-                # 末端光点 + v正/v逆 标签 + 阶段文字全程跟随（参考启源化学）。
+                # 动态 v-t 曲线：骨架淡入 → 曲线随进度"长"出来 →
+                # 末端光点 + v正/v逆 标签 + 阶段文字全程跟随。
                 static, alpha, dynamic = equilibrium_anim(cfg, seg)
                 reveal(self, static, run_time=T_IN)
                 seg_objects.append(static)
                 elapsed += T_IN
-                # always_redraw 对象用 add 常驻，由 alpha 驱动持续更新（不能用 FadeIn）
                 for o in dynamic:
                     self.add(o)
                     seg_objects.append(o)
-
                 grow = float(seg.get("curve_grow", 5.0))
                 self.play(alpha.animate.set_value(1.0), run_time=grow, rate_func=linear)
                 elapsed += grow
-                stay = dur - T_IN - grow - T_X - T_FADE
-                self.wait(max(0.2, stay))
-                elapsed += max(0.2, stay)
+                pending = None
+
+            elif kind == "bars" and seg.get("bar_anim", False):
+                # 动态柱状图：骨架淡入 → 三阶段依次长出柱子，每阶段数值立刻跟随。
+                static, stages, base_y = bars_anim_parts(cfg, seg)
+                reveal(self, static, run_time=T_IN)
+                seg_objects.append(static)
+                elapsed += T_IN
+                bar_grow = float(seg.get("bar_grow", 0.9))
+                for grp, bars, nums in stages:
+                    # 阶段静态部分淡入（阶段标签 + 顶部色块），柱子先不显示
+                    self.play(FadeIn(grp), run_time=0.25)
+                    seg_objects.append(grp)
+                    elapsed += 0.25
+                    # 两根柱子从底部长出（GrowFromEdge 会把柱子加入场景）
+                    self.play(*[GrowFromEdge(b, DOWN) for b in bars], run_time=bar_grow)
+                    for b in bars:
+                        seg_objects.append(b)
+                    elapsed += bar_grow
+                    # 数值紧跟标注（不等，柱子长完立刻出）
+                    self.play(LaggedStart(*[FadeIn(n) for n in nums],
+                                          lag_ratio=0.3), run_time=0.3)
+                    for n in nums:
+                        self.add(n)
+                        seg_objects.append(n)
+                    elapsed += 0.3
+                pending = None
+
+            elif kind == "lechatelier" and seg.get("transition"):
+                # 圆环过场：一闪而过的章节页（金环描边 + 光点绕圈 + 大标题）
+                tr = seg["transition"]
+                page, ring, dots, center = chapter_transition(
+                    cfg, seg, tr.get("number", "04"),
+                    tr.get("title", ""), tr.get("en", ""))
+                self.play(Create(ring), run_time=0.7)
+                self.add(dots)
+                self.play(FadeIn(center), run_time=0.4)
+                # 光点绕圈旋转（过场时长）
+                tr_dur = float(tr.get("dur", 2.6))
+                rot_time = min(1.2, tr_dur * 0.5)
+                self.play(Rotate(dots, angle=2 * 3.14159265 * 0.75), run_time=rot_time)
+                self.wait(max(0.2, tr_dur - 0.7 - 0.4 - rot_time))
+                elapsed += tr_dur
+                seg_objects.append(page)
+                # 过场淡出，进入正文骨架
+                self.play(FadeOut(page), run_time=T_FADE)
+                self.remove(page)
+                seg_objects = []
+                elapsed += T_FADE
+                visual = BUILDERS[kind](cfg, seg)
+                reveal(self, visual, run_time=T_IN)
+                seg_objects.append(visual)
+                elapsed += T_IN
+                pending = None
             else:
                 visual = BUILDERS[kind](cfg, seg)
                 reveal(self, visual, run_time=T_IN)
                 seg_objects.append(visual)
                 elapsed += T_IN
-                stay = dur - T_IN - T_X - T_FADE
-                self.wait(max(0.2, stay))
-                elapsed += max(0.2, stay)
+                pending = None
 
-            # ---- 2. 字幕：逐字浮现（motion 开）或整句淡入（关）----
+            # ---- 2. 字幕：紧跟画面立即出现（逐字浮现 / 整句淡入）----
             if seg.get("caption"):
                 if _MOTION["enabled"]:
                     new_cap = caption_chars(cfg, seg["caption"])
@@ -131,6 +171,23 @@ class Episode(Scene):
                     self.play(FadeIn(new_cap), run_time=T_X)
                 seg_objects.append(new_cap)
                 elapsed += T_X
+
+            # ---- 2b. particle 延后动作：字幕出现后再做压缩变形 ----
+            if pending == "particle":
+                hold = dur * 0.35
+                self.wait(max(0.2, hold - T_X))
+                elapsed += max(0.2, hold - T_X)
+                compressed = particle_panel(cfg, seg, compressed=True)
+                self.play(Transform(visual, compressed), run_time=1.0)
+                elapsed += 1.0
+                visual = compressed
+                seg_objects.append(visual)
+
+            # ---- 2c. 统一停留：字幕/动画都就位后一起停留，补足本段时长 ----
+            stay = dur - elapsed - T_X - T_FADE
+            if stay > 0.2:
+                self.wait(stay)
+                elapsed += stay
 
             # ---- 3. 进度条 ----
             fraction = min(1.0, elapsed / total)

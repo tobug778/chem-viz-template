@@ -98,19 +98,28 @@ segments:
 
   - kind: bars
     dur: 14
+    bar_anim: true             # 三阶段依次长出柱子+数值紧跟；false 回到静态整图
+    bar_grow: 0.9              # 每阶段柱子生长时长（秒）
     moment: "刚刚加压的一瞬间"
     formula: "c(NH₃) ↑  →  产率 ↑"
     caption: "加压使平衡向气体少的方向移动"
-    # 三阶段：[标签, 反应物柱高, 生成物柱高]
+    # 三阶段：[标签, 反应物柱高, 生成物柱高, 反应物数值(可选), 生成物数值(可选)]
     bar_stages:
       - ["加压前", 1.6, 0.5]
       - ["刚加压", 2.1, 0.65]
       - ["新平衡", 0.7, 1.8]
+    bar_swatches: ["ox", "nh3", "nitro"]   # 三阶段顶部色块
     bar_color_a: "nitro"    # 反应物柱（蓝）
     bar_color_b: "nh3"      # 生成物柱（黄）
 
   - kind: lechatelier
     dur: 9
+    # 圆环过场：一闪而过的章节页（外圈金环 + 黄蓝光点绕圈 + 大页码/标题/英文）
+    transition:
+      number: "04"
+      title: "减弱，不是抵消"
+      en: "WEAKEN, NOT CANCEL"
+      dur: 2.6               # 过场停留时长（秒），之后淡出进入正文
     label: "勒夏特列原理"
     line1: "减弱，不是抵消"
     line2: "加压 → 往气体少的方向移动"

@@ -7,9 +7,10 @@ import random
 
 import numpy as np
 from manim import (
-    VGroup, Text, Dot, Rectangle, RoundedRectangle, Line,
+    VGroup, Text, Dot, Rectangle, RoundedRectangle, Line, Circle,
     DashedLine, VMobject, UP, DOWN, LEFT, RIGHT,
     FadeIn, LaggedStart, ValueTracker, always_redraw,
+    GrowFromEdge, Rotate, Create,
 )
 
 from theme import FONT_STACK, SAFE_W, TOP_Y, BOTTOM_Y
@@ -432,6 +433,112 @@ def bars(cfg, seg):
     formula.move_to([0, -2.2, 0])
     g.add(baseline, formula)
     return g
+
+
+# ---------- 动态柱状图（配置开关 bar_anim）----------
+def bars_anim_parts(cfg, seg):
+    """动态柱状图：骨架一次淡入，三阶段依次出现。
+    每个阶段 = (阶段组, 该阶段柱子列表, 该阶段数值列表)，供场景按顺序 GrowFromEdge 长出柱子、
+    数值紧跟标注。参考启源化学：上方色块 + 阶段标签 + 两根柱 + 柱顶数值，逐阶段构建。
+    返回 (static, stages, base_y)
+    """
+    s = cfg["style"]
+    moment = txt(seg["moment"], _fs(s, "font_body", 26), _color(s, "text"), bold=True)
+    moment.move_to([0, 2.5, 0])
+    formula = txt(seg["formula"], _fs(s, "font_formula_long", 26), _color(s, "text"))
+    formula.move_to([0, -2.2, 0])
+    base_y = -1.0
+    baseline = Line([-1.8, base_y, 0], [1.8, base_y, 0],
+                    stroke_width=1, color=_color(s, "panel_line"))
+    static = VGroup(moment, formula, baseline)
+
+    stages = seg.get("bar_stages", [
+        ("压缩前", 1.0, 0.6), ("刚压完", 1.9, 1.15), ("新平衡", 1.35, 1.0),
+    ])
+    col_a = _color(s, seg.get("bar_color_a", "no2"))
+    col_b = _color(s, seg.get("bar_color_b", "n2o4"))
+    # 阶段顶部色块：反应物柱色 / 生成物柱色的深色调，参考图的三个色卡
+    swatches = seg.get("bar_swatches", [])
+    sm = _fs(s, "font_small", 18)
+
+    out = []
+    for i, stage in enumerate(stages):
+        label, h_a, h_b = stage[0], stage[1], stage[2]
+        cx = -1.25 + i * 1.25
+        grp = VGroup()
+
+        # 顶部色块（若有）：参考图的深/中/深色卡
+        if i < len(swatches):
+            sw = RoundedRectangle(
+                width=0.78, height=0.34, corner_radius=0.05,
+                stroke_color=_color(s, "panel_line"), stroke_width=1,
+                fill_color=_color(s, swatches[i]), fill_opacity=0.85)
+            sw.move_to([cx, 2.0, 0])
+            grp.add(sw)
+
+        b1 = Rectangle(width=0.34, height=h_a, fill_color=col_a,
+                       fill_opacity=0.9, stroke_width=0)
+        b1.move_to([cx - 0.2, base_y + h_a / 2, 0])
+        b2 = Rectangle(width=0.34, height=h_b, fill_color=col_b,
+                       fill_opacity=0.8, stroke_width=0)
+        b2.move_to([cx + 0.2, base_y + h_b / 2, 0])
+        lab = txt(label, sm, _color(s, "text_dim"))
+        lab.move_to([cx, base_y - 0.22, 0])
+
+        # 数值标注：贴近各自柱顶，字体用对应柱色区分（反应物暖色/生成物金黄）
+        va = _fmt_num(stage[3]) if len(stage) > 3 else _fmt_num(h_a)
+        vb = _fmt_num(stage[4]) if len(stage) > 4 else _fmt_num(h_b)
+        na = txt(va, sm, col_a, bold=True)
+        na.next_to(b1, UP, buff=0.08)
+        nb = txt(vb, sm, _color(s, "text"), bold=True)
+        nb.next_to(b2, UP, buff=0.08)
+
+        # 注意：柱子不放进 grp（grp 只淡入色块+标签）。柱子交给 GrowFromEdge
+        # 从底部长出，否则 FadeIn(grp) 时柱子已完整显示，"生长"效果就没了。
+        grp.add(lab)
+        out.append((grp, [b1, b2], [na, nb]))
+    return static, out, base_y
+
+
+def _fmt_num(v):
+    """数值标注格式化：去掉多余的 .0。"""
+    try:
+        f = float(v)
+        return str(int(f)) if abs(f - int(f)) < 1e-6 else ("%.2f" % f).rstrip("0")
+    except (ValueError, TypeError):
+        return str(v)
+
+
+def chapter_transition(cfg, seg, number, title, en_title):
+    """圆环过场（参考启源化学"04 减弱，不是抵消"）：
+    外圈细金圆环 + 内圈黄蓝交替光点绕圈 + 中心大页码/标题/英文。
+    返回 (group, ring, dots)，场景负责让 ring 描边绘制、dots 旋转、文字淡入，一闪而过。
+    """
+    s = cfg["style"]
+    g = VGroup()
+    ring = Circle(
+        radius=1.9,
+        stroke_color=_color(s, "accent"), stroke_width=1.6,
+    )
+    # 内圈光点：黄蓝交替，绕成一圈
+    dots = VGroup()
+    n = 24
+    radius = 1.42
+    for k in range(n):
+        ang = 2 * np.pi * k / n
+        col = _color(s, "accent") if k % 2 == 0 else _color(s, "nitro")
+        d = Dot(point=np.array([radius * np.cos(ang), radius * np.sin(ang), 0.0]),
+                radius=0.045, color=col)
+        dots.add(d)
+
+    num = txt(str(number), _fs(s, "font_heading", 34) * 2.0,
+              _color(s, "accent"), bold=True)
+    ttl = txt(title, _fs(s, "font_heading", 34), _color(s, "text"), bold=True)
+    en = txt(en_title, _fs(s, "font_small", 18), _color(s, "text_dim"))
+    center = VGroup(num, ttl, en).arrange(DOWN, buff=0.22)
+
+    g.add(ring, dots, center)
+    return g, ring, dots, center
 
 
 def lechatelier(cfg, seg):
