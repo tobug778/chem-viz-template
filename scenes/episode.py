@@ -20,8 +20,10 @@ from manim import Scene, FadeIn, FadeOut, Transform, UP
 
 from theme import load_config
 from components import (
-    BUILDERS, top_bar, progress_track, progress_fill, caption, particle_panel,
+    BUILDERS, top_bar, progress_track, progress_fill, caption, caption_chars,
+    particle_panel, configure_rich, configure_motion, reveal,
 )
+from components import _MOTION
 
 
 def _active_episode() -> str:
@@ -41,6 +43,10 @@ class Episode(Scene):
     def construct(self):
         name = _active_episode()
         cfg = load_config(name)
+
+        # ---- 视觉效果：读 style 开关（默认关闭，保持清爽风格）----
+        configure_rich(cfg["style"])
+        configure_motion(cfg["style"])
 
         # ---- 常驻元素：顶栏 + 进度条底轨（全程不清除）----
         header = top_bar(cfg)
@@ -70,7 +76,7 @@ class Episode(Scene):
             # ---- 1. 画面主体 ----
             if kind == "particle":
                 visual = particle_panel(cfg, seg, compressed=False)
-                self.play(FadeIn(visual, shift=0.12 * UP), run_time=T_IN)
+                reveal(self, visual, run_time=T_IN)
                 seg_objects.append(visual)
                 elapsed += T_IN
 
@@ -88,17 +94,22 @@ class Episode(Scene):
                 elapsed += max(0.2, remain)
             else:
                 visual = BUILDERS[kind](cfg, seg)
-                self.play(FadeIn(visual, shift=0.1 * UP), run_time=T_IN)
+                reveal(self, visual, run_time=T_IN)
                 seg_objects.append(visual)
                 elapsed += T_IN
                 stay = dur - T_IN - T_X - T_FADE
                 self.wait(max(0.2, stay))
                 elapsed += max(0.2, stay)
 
-            # ---- 2. 字幕：每段全新对象，退场时一起清掉 ----
+            # ---- 2. 字幕：逐字浮现（motion 开）或整句淡入（关）----
             if seg.get("caption"):
-                new_cap = caption(cfg, seg["caption"])
-                self.play(FadeIn(new_cap), run_time=T_X)
+                if _MOTION["enabled"]:
+                    new_cap = caption_chars(cfg, seg["caption"])
+                    reveal(self, new_cap, run_time=max(0.8, T_X * 3),
+                           lag_ratio=0.06, shift=0.04)
+                else:
+                    new_cap = caption(cfg, seg["caption"])
+                    self.play(FadeIn(new_cap), run_time=T_X)
                 seg_objects.append(new_cap)
                 elapsed += T_X
 

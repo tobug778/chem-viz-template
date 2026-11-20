@@ -33,6 +33,26 @@ style:
   font_formula: 30
   font_formula_long: 22
 
+  # ---- 富文字特效（可选，默认关闭）----
+  # 打开后：关键词自动标黄 + 大标题描边立体 + 标题放大，更接近参考片的"丰富感"。
+  # 想回到清爽风格就把 rich_text 改回 false。
+  rich_text: true
+  highlight_words:            # 出现即染色的关键词
+    - "200 个大气压"
+    - "反应就停止"
+    - "产率"
+    - "减弱"
+    - "抵消"
+    - "气体少"
+  highlight_color: "#FFD166" # 高亮词颜色（暖金，比强调色更亮）
+  gold_outline: "#6B4410"    # 大标题描边色（深棕，立体感）
+  heading_boost: 1.12        # 大标题放大系数（字号层次）
+
+  # ---- 入场动态（可选，默认关闭）----
+  # 打开后：画面元素逐层浮现 + 字幕逐字出现（打字机感），更有节奏。
+  # 关掉则回到整体淡入。想静帧观感就设 false。
+  motion: true
+
 segments:
   - kind: hook
     dur: 5

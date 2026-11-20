@@ -9,6 +9,7 @@ import numpy as np
 from manim import (
     VGroup, Text, Dot, Rectangle, RoundedRectangle, Line,
     DashedLine, VMobject, UP, DOWN, LEFT, RIGHT,
+    FadeIn, LaggedStart,
 )
 
 from theme import FONT_STACK, SAFE_W, TOP_Y, BOTTOM_Y
@@ -23,23 +24,92 @@ def _fs(style, key, default):
     return style.get(key, default)
 
 
-def txt(text, size, color, bold=False, max_width=None):
+# ---- 富文字特效（配置驱动，全局开关）----
+# 由场景 construct 开始时调用 configure_rich() 注入。
+# 默认关闭：保持清爽风格；打开后：高亮词自动染色 + 大标题描边立体。
+_RICH = {
+    "enabled": False,
+    "words": [],
+    "color": None,
+    "outline": None,
+    "heading_boost": 1.0,
+}
+
+
+def configure_rich(style):
+    """从 style 配置注入富文字特效开关。
+    - rich_text:        总开关，默认 false
+    - highlight_words:  出现即染色的关键词列表
+    - highlight_color:  高亮颜色（缺省用 accent）
+    - gold_outline:     标题描边色（缺省 None，不描边）
+    - heading_boost:    开启特效时大标题放大系数（如 1.15），制造字号层次
+    """
+    _RICH["enabled"] = bool(style.get("rich_text", False))
+    _RICH["words"] = list(style.get("highlight_words", []))
+    _RICH["color"] = style.get("highlight_color", style.get("accent", "#FFC857"))
+    _RICH["outline"] = style.get("gold_outline")
+    _RICH["heading_boost"] = float(style.get("heading_boost", 1.0))
+
+
+def txt(text, size, color, bold=False, max_width=None, outline=False):
     """统一文字工厂：指定字体栈，避免不同系统缺字。
 
     max_width 为 None 时用安全宽度 SAFE_W；超宽自动等比缩小，
     从根本上杜绝长句被竖屏右边缘裁切。
+
+    富文字特效（仅当 _RICH.enabled）：
+    - 句内换色：高亮词表里的词自动染成 highlight_color（Text.t2c）
+    - 描边立体：outline=True 的大标题加描边（stroke_color/width）
+    两者都不改变动画逻辑，关掉开关即回到清爽版。
     """
-    t = Text(
-        text,
+    eff_size = size * _RICH["heading_boost"] if (outline and _RICH["enabled"]) else size
+    kwargs = dict(
         font=FONT_STACK,
-        font_size=size,
+        font_size=eff_size,
         color=color,
         weight="BOLD" if bold else "NORMAL",
     )
+    if _RICH["enabled"]:
+        # 1) 句内换色：把命中的高亮词映射到强调色
+        hits = {w: _RICH["color"] for w in _RICH["words"] if w and w in text}
+        if hits:
+            kwargs["t2c"] = hits
+        # 2) 描边立体 + 3) 字号层次（放大）：仅大标题按需开启
+        if outline and _RICH["outline"]:
+            kwargs["stroke_color"] = _RICH["outline"]
+            kwargs["stroke_width"] = 1.2
+    t = Text(text, **kwargs)
     limit = SAFE_W if max_width is None else max_width
     if hasattr(t, "width") and t.width > limit:
         t.scale_to_fit_width(limit)
     return t
+
+
+# ---- 入场动态（配置驱动，全局开关）----
+# motion: true 时画面逐层浮现、字幕逐字浮现；false 时整体淡入（旧行为）。
+_MOTION = {"enabled": False}
+
+
+def configure_motion(style):
+    _MOTION["enabled"] = bool(style.get("motion", False))
+
+
+def reveal(scene, mobject, run_time=0.6, lag_ratio=0.12, shift=0.12):
+    """把 mobject 拆成子件依次淡入，营造'一层层出现'的动态感。
+    - 对 VGroup：逐个子对象入场（画面分层）
+    - 对 Text：逐个字符入场（打字机效果）
+    motion 关闭或只有一个子件时，退回整体淡入。
+    """
+    if not _MOTION["enabled"]:
+        scene.play(FadeIn(mobject, shift=shift * UP), run_time=run_time)
+        return run_time
+    parts = list(mobject.submobjects)
+    if len(parts) < 2:
+        scene.play(FadeIn(mobject, shift=shift * UP), run_time=run_time)
+        return run_time
+    anims = [FadeIn(p, shift=shift * UP) for p in parts]
+    scene.play(LaggedStart(*anims, lag_ratio=lag_ratio), run_time=run_time)
+    return run_time
 
 
 def top_bar(cfg):
@@ -86,13 +156,48 @@ def caption(cfg, text):
     return t
 
 
+def caption_chars(cfg, text):
+    """字幕按字符拆成独立 Text，供 reveal() 做逐字浮现（打字机效果）。
+    属于高亮词的字符用 highlight_color 染色，兼容富文字特效。
+    """
+    s = cfg["style"]
+    size = _fs(s, "font_caption", 30)
+    base_color = _color(s, "accent")
+    hi_color = s.get("highlight_color", base_color) if _RICH["enabled"] else base_color
+
+    # 标出哪些位置属于高亮词
+    hi_mask = [False] * len(text)
+    if _RICH["enabled"]:
+        for word in _RICH["words"]:
+            if not word:
+                continue
+            start = 0
+            while True:
+                idx = text.find(word, start)
+                if idx < 0:
+                    break
+                for k in range(idx, idx + len(word)):
+                    if k < len(hi_mask):
+                        hi_mask[k] = True
+                start = idx + len(word)
+
+    group = VGroup()
+    for i, ch in enumerate(text):
+        c = Text(ch, font=FONT_STACK, font_size=size,
+                 color=hi_color if hi_mask[i] else base_color,
+                 weight="BOLD")
+        group.add(c)
+    group.arrange(RIGHT, buff=0.0).move_to([0, BOTTOM_Y + 0.12, 0])
+    return group
+
+
 def hook(cfg, seg):
     """段1：悬念钩子 + 注射器压缩示意。"""
     s = cfg["style"]
     g = VGroup()
     eyebrow = txt(seg["eyebrow"], _fs(s,"font_accent",30), _color(s, "accent"))
-    l1 = txt(seg["line1"], _fs(s,"font_heading",38), _color(s, "text"), bold=True)
-    l2 = txt(seg["line2"], _fs(s,"font_heading",38), _color(s, "text"), bold=True)
+    l1 = txt(seg["line1"], _fs(s,"font_heading",38), _color(s, "text"), bold=True, outline=True)
+    l2 = txt(seg["line2"], _fs(s,"font_heading",38), _color(s, "text"), bold=True, outline=True)
     g.add(eyebrow, l1, l2)
     g.arrange(DOWN, buff=0.18).move_to([0, 1.35, 0])
 
@@ -221,7 +326,7 @@ def lechatelier(cfg, seg):
     s = cfg["style"]
     g = VGroup()
     lab = txt(seg["label"], _fs(s,"font_small",20), _color(s, "text_dim"))
-    l1 = txt(seg["line1"], _fs(s,"font_heading",38), _color(s, "accent"), bold=True)
+    l1 = txt(seg["line1"], _fs(s,"font_heading",38), _color(s, "accent"), bold=True, outline=True)
     l2 = txt(seg["line2"], _fs(s,"font_body",26), _color(s, "text"))
     formula = txt(seg["formula"], _fs(s,"font_formula_long",26), _color(s, "n2o4"))
     g.add(lab, l1, l2, formula)
@@ -233,7 +338,7 @@ def outro(cfg, seg):
     """段6：互动收尾。"""
     s = cfg["style"]
     g = VGroup()
-    q = txt(seg["question"], _fs(s,"font_heading",38), _color(s, "text"), bold=True)
+    q = txt(seg["question"], _fs(s,"font_heading",38), _color(s, "text"), bold=True, outline=True)
     opts = VGroup(
         RoundedRectangle(width=1.7, height=0.55, corner_radius=0.08,
                          stroke_color=_color(s, "panel_line"), stroke_width=1.5,
