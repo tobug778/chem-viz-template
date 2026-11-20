@@ -1,6 +1,5 @@
 media/
 output/
-assets/bgm.mp3
 __pycache__/
 *.pyc
 .DS_Store
