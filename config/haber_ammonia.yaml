@@ -1,0 +1,98 @@
+# ============================================================
+# 第二期：合成氨反应（哈伯法）—— 加压为什么提高产率
+# 与第一期同构：气体分子数减少的反应，加压平衡正向移动
+# 换一期：只改这个文件，不动任何 Python 代码
+# ============================================================
+meta:
+  series: "你没见过的化学"
+  episode_no: "02"
+  title: "合成氨平衡"
+  hook: "工业上几百个大气压，到底在压什么"
+  watermark: false          # 全局水印开关：false = 任何画面都不加水印
+
+style:
+  # 原版深色配色（沉稳专业），字号与第一期一致
+  bg: "#0A1526"
+  panel: "#132238"
+  panel_line: "#2E4A6B"
+  text: "#EAF2FF"
+  text_dim: "#8FA8C8"
+  accent: "#FFC857"
+  no2: "#C1440E"            # 本期不用，保留兼容
+  n2o4: "#9FB2C9"           # 本期不用，保留兼容
+  ox: "#E8552F"
+  nitro: "#3E6FB0"          # N2 氮气（蓝）
+  nh3: "#FFC857"            # NH3 氨（强调黄）
+  font_cn: "Noto Sans CJK SC"
+
+  font_small: 20
+  font_body: 26
+  font_caption: 30
+  font_accent: 30
+  font_heading: 38
+  font_formula: 34
+  font_formula_long: 26
+
+segments:
+  - kind: hook
+    dur: 6
+    eyebrow: "平衡 · 02"
+    line1: "把氮气和氢气"
+    line2: "压到 200 个大气压，会怎样？"
+    gas_color: "nitro"      # 注射器里气体改蓝色（代表 N2/H2 混合气）
+
+  - kind: particle
+    dur: 12
+    formula: "N₂ + 3 H₂  ⇌  2 NH₃"
+    sub: "01  压缩那一瞬间"
+    caption: "氢氮分子变少，氨分子变多"
+    particles:
+      a:                    # 反应物（N2 + H2），压缩后减少
+        color: "nitro"
+        radius: 0.055
+        opacity: 0.9
+        normal: 20
+        compressed: 9
+      b:                    # 生成物（NH3），压缩后增多
+        color: "nh3"
+        radius: 0.045
+        opacity: 0.9
+        normal: 8
+        compressed: 21
+
+  - kind: equilibrium
+    dur: 12
+    question: "平衡了，反应就停止了吗？"
+    formula: "v 正 = v 逆 ≠ 0"
+    caption: "分子仍在反应，只是正逆速率相等"
+
+  - kind: bars
+    dur: 14
+    moment: "刚刚加压的一瞬间"
+    formula: "c(NH₃) ↑  →  产率 ↑"
+    caption: "加压使平衡向气体少的方向移动"
+    # 三阶段：[标签, 反应物柱高, 生成物柱高]
+    bar_stages:
+      - ["加压前", 1.6, 0.5]
+      - ["刚加压", 2.1, 0.65]
+      - ["新平衡", 0.7, 1.8]
+    bar_color_a: "nitro"    # 反应物柱（蓝）
+    bar_color_b: "nh3"      # 生成物柱（黄）
+
+  - kind: lechatelier
+    dur: 10
+    label: "勒夏特列原理"
+    line1: "减弱，不是抵消"
+    line2: "加压 → 平衡往气体分子数少的方向移动"
+    formula: "K = c²(NH₃) / [c(N₂) · c³(H₂)]"
+
+  - kind: outro
+    dur: 8
+    question: "增大压强，氨的产率怎么变？"
+    opt_a: "A  提高"
+    opt_b: "B  降低"
+    cta: "评论区告诉我"
+
+audio:
+  bgm: "assets/bgm.mp3"
+  volume: 0.18

@@ -95,7 +95,8 @@ def hook(cfg, seg):
         stroke_color=_color(s, "panel_line"), stroke_width=2,
         fill_color=_color(s, "panel"), fill_opacity=0.6,
     )
-    gas = Rectangle(width=1.3, height=0.5, fill_color=_color(s, "no2"),
+    gas = Rectangle(width=1.3, height=0.5,
+                    fill_color=_color(s, seg.get("gas_color", "no2")),
                     fill_opacity=0.75, stroke_width=0)
     gas.move_to(barrel.get_center() + RIGHT * 0.25)
     plunger = Line(UP * 0.42, DOWN * 0.42, stroke_width=5, color=_color(s, "text_dim"))
@@ -117,17 +118,21 @@ def particle_panel(cfg, seg, compressed=False):
     panel.move_to([0, 0.7, 0])
 
     dots = VGroup()
-    n_no2, n_n2o4 = (16, 14) if not compressed else (7, 22)
-    for _ in range(n_no2):   # 红棕色单分子 NO2
-        d = Dot(radius=0.055, color=_color(s, "no2"), fill_opacity=0.9)
-        d.move_to(panel.get_center() + np.array([rng.uniform(-1.5, 1.5),
-                                                 rng.uniform(-0.8, 0.8), 0]))
-        dots.add(d)
-    for _ in range(n_n2o4):  # 近无色双原子 N2O4（用浅色小圆表示）
-        d = Dot(radius=0.04, color=_color(s, "n2o4"), fill_opacity=0.55)
-        d.move_to(panel.get_center() + np.array([rng.uniform(-1.5, 1.5),
-                                                 rng.uniform(-0.8, 0.8), 0]))
-        dots.add(d)
+    # 粒子组成从配置读取：两种粒子的颜色键、半径、数量、压缩后数量
+    p = seg.get("particles", {})
+    a = p.get("a", {"color": "no2", "radius": 0.055, "opacity": 0.9,
+                    "normal": 16, "compressed": 7})
+    b = p.get("b", {"color": "n2o4", "radius": 0.04, "opacity": 0.55,
+                    "normal": 14, "compressed": 22})
+    for spec in (a, b):
+        count = spec.get("compressed" if compressed else "normal", 0)
+        for _ in range(count):
+            d = Dot(radius=spec.get("radius", 0.05),
+                    color=_color(s, spec.get("color", "text")),
+                    fill_opacity=spec.get("opacity", 0.8))
+            d.move_to(panel.get_center() + np.array([rng.uniform(-1.5, 1.5),
+                                                     rng.uniform(-0.8, 0.8), 0]))
+            dots.add(d)
 
     scale = 0.72 if compressed else 1.0
     dots.scale(scale).move_to(panel.get_center())
@@ -175,15 +180,23 @@ def bars(cfg, seg):
     moment.move_to([0, 2.5, 0])
 
     base_y = -1.0
-    groups = [("压缩前", 1.0, 0.6), ("刚压完", 1.9, 1.15), ("新平衡", 1.35, 1.0)]
-    for i, (label, h_no2, h_n2o4) in enumerate(groups):
+    # 三阶段柱状图从配置读取：每阶段标签 + 两种物质的柱高
+    stages = seg.get("bar_stages", [
+        ("压缩前", 1.0, 0.6), ("刚压完", 1.9, 1.15), ("新平衡", 1.35, 1.0),
+    ])
+    colors = [
+        _color(s, seg.get("bar_color_a", "no2")),
+        _color(s, seg.get("bar_color_b", "n2o4")),
+    ]
+    for i, stage in enumerate(stages):
+        label, h_a, h_b = stage[0], stage[1], stage[2]
         cx = -1.25 + i * 1.25
-        b1 = Rectangle(width=0.34, height=h_no2, fill_color=_color(s, "no2"),
+        b1 = Rectangle(width=0.34, height=h_a, fill_color=colors[0],
                        fill_opacity=0.85, stroke_width=0)
-        b1.move_to([cx - 0.2, base_y + h_no2 / 2, 0])
-        b2 = Rectangle(width=0.34, height=h_n2o4, fill_color=_color(s, "n2o4"),
+        b1.move_to([cx - 0.2, base_y + h_a / 2, 0])
+        b2 = Rectangle(width=0.34, height=h_b, fill_color=colors[1],
                        fill_opacity=0.7, stroke_width=0)
-        b2.move_to([cx + 0.2, base_y + h_n2o4 / 2, 0])
+        b2.move_to([cx + 0.2, base_y + h_b / 2, 0])
         lab = txt(label, _fs(s,"font_small",20), _color(s, "text_dim"))
         lab.move_to([cx, base_y - 0.2, 0])
         g.add(b1, b2, lab)
@@ -222,8 +235,8 @@ def outro(cfg, seg):
                          stroke_color=_color(s, "panel_line"), stroke_width=1.5,
                          fill_color=_color(s, "panel"), fill_opacity=0.6),
     ).arrange(RIGHT, buff=0.35)
-    oa = txt("A  变深", _fs(s,"font_small",20), _color(s, "text_dim")).move_to(opts[0].get_center())
-    ob = txt("B  变浅", _fs(s,"font_small",20), _color(s, "text_dim")).move_to(opts[1].get_center())
+    oa = txt(seg.get("opt_a", "A  变深"), _fs(s,"font_small",20), _color(s, "text_dim")).move_to(opts[0].get_center())
+    ob = txt(seg.get("opt_b", "B  变浅"), _fs(s,"font_small",20), _color(s, "text_dim")).move_to(opts[1].get_center())
     cta = txt(seg["cta"], _fs(s,"font_accent",30), _color(s, "accent"))
     g.add(q, opts, oa, ob, cta)
     q.move_to([0, 1.5, 0])

@@ -1,19 +1,15 @@
 name: 渲染化学可视化视频
 
 # 触发方式：
-# 1) 手动：Actions 页 -> Run workflow -> 选场景/配置
-# 2) 推代码到 main 自动渲染
+# 1) 自动：推代码到 main（改 config/ACTIVE 指向本期，push 后自动渲染该期）
+# 2) 手动：Actions 页 -> Run workflow -> 填要渲染的配置名（留空则用 ACTIVE）
 on:
   workflow_dispatch:
     inputs:
       episode:
-        description: '配置文件名（config/ 下，不含 .yaml）'
-        required: true
-        default: 'no2_equilibrium'
-      scene:
-        description: '场景类名'
-        required: true
-        default: 'NO2Equilibrium'
+        description: '要渲染的配置名（config/ 下，不含 .yaml；留空用 ACTIVE）'
+        required: false
+        default: ''
   push:
     branches: [main]
     paths:
@@ -21,10 +17,6 @@ on:
       - 'src/**'
       - 'config/**'
       - 'manim.cfg'
-
-env:
-  EPISODE: ${{ github.event.inputs.episode || 'no2_equilibrium' }}
-  SCENE: ${{ github.event.inputs.scene || 'NO2Equilibrium' }}
 
 jobs:
   render:
@@ -47,15 +39,27 @@ jobs:
       - name: 安装 Python 依赖
         run: pip install -r requirements.txt
 
+      - name: 确定本期配置
+        run: |
+          INPUT="${{ github.event.inputs.episode }}"
+          if [ -n "$INPUT" ]; then
+            EP="$INPUT"
+          elif [ -f config/ACTIVE ]; then
+            EP="$(tr -d '[:space:]' < config/ACTIVE)"
+          else
+            EP="no2_equilibrium"
+          fi
+          echo "EPISODE=$EP" >> "$GITHUB_ENV"
+          echo "本期配置：$EP"
+
       - name: 渲染竖屏视频（720x1280）
         run: |
-          SCENE_FILE="scenes/${EPISODE}.py"
-          if [ ! -f "$SCENE_FILE" ]; then
-            echo "场景文件不存在：$SCENE_FILE"; exit 1
+          if [ ! -f "config/${EPISODE}.yaml" ]; then
+            echo "配置文件不存在：config/${EPISODE}.yaml"; exit 1
           fi
-          # 用 -r 显式指定竖屏分辨率 + --fps 30；不要加 -q，
-          # 否则质量预设会覆盖成 16:9 横屏。
-          manim -r 720,1280 --fps 30 "$SCENE_FILE" "$SCENE"
+          # 统一用通用场景 episode.py；配置名经环境变量 EPISODE 传入。
+          # -r 指定竖屏分辨率 + --fps 30；不要加 -q（会覆盖成 16:9 横屏）。
+          EPISODE="$EPISODE" manim -r 720,1280 --fps 30 scenes/episode.py Episode
 
       - name: 上传成片
         uses: actions/upload-artifact@v4
