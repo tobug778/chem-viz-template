@@ -68,8 +68,22 @@ jobs:
 
       - name: 给成片起可读文件名
         run: |
-          SRC=$(find media/videos -name '*.mp4' -type f | head -1)
-          if [ -z "$SRC" ]; then echo "找不到渲染出的 mp4"; exit 1; fi
+          # 只认最终成片 Episode.mp4，并排除 manim 的临时片段目录 partial_movie_files。
+          # 绝不能用裸 find|head —— 里面有一堆几秒的临时片段，命中就会发布 0.3s 坏视频。
+          SRC=$(find media/videos -type d -name 'partial_movie_files' -prune -o \
+                -type f -name 'Episode.mp4' -print | head -1)
+          if [ -z "$SRC" ] || [ ! -f "$SRC" ]; then
+            echo "找不到最终成片 Episode.mp4"
+            echo "--- media/videos 下的 mp4（排查用）---"
+            find media/videos -name '*.mp4' -type f 2>/dev/null | head -30
+            exit 1
+          fi
+          echo "最终成片：$SRC"
+          # 时长校验：成片必须 >=20 秒，防止把临时片段/损坏文件发布出去。
+          DUR=$(ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 "$SRC")
+          echo "成片时长：${DUR}s"
+          python3 -c "import sys; d=float('$DUR'); sys.exit(0 if d>=20 else 1)" \
+            || { echo "成片时长异常（<20s），拒绝发布"; exit 1; }
           # 从本期配置读期号与标题（用 python + pyyaml，requirements 已含）
           EPISODE_NO=$(python3 -c "import yaml;print(yaml.safe_load(open('config/${EPISODE}.yaml',encoding='utf-8'))['meta'].get('episode_no',''))")
           TITLE=$(python3 -c "import yaml;print(yaml.safe_load(open('config/${EPISODE}.yaml',encoding='utf-8'))['meta'].get('title',''))")
