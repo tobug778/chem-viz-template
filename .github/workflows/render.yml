@@ -17,6 +17,7 @@ on:
       - 'src/**'
       - 'config/**'
       - 'manim.cfg'
+      - '.github/workflows/**'   # 改工作流本身也要触发（否则固定入口这类改动被跳过）
 
 # 发布到 Releases 需要写权限（固定下载入口）
 permissions:
