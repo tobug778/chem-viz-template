@@ -154,7 +154,8 @@ def progress_fill(cfg, fraction):
 
 def caption(cfg, text):
     s = cfg["style"]
-    t = txt(text, _fs(s,"font_caption",30), _color(s, "accent"))
+    # 白字正文 + 金黄高亮词（同色系深浅），关键词由 txt() 内的 t2c 自动染色。
+    t = txt(text, _fs(s,"font_caption",30), _color(s, "text"))
     t.move_to([0, BOTTOM_Y + 0.12, 0])
     return t
 
@@ -165,8 +166,9 @@ def caption_chars(cfg, text):
     """
     s = cfg["style"]
     size = _fs(s, "font_caption", 30)
-    base_color = _color(s, "accent")
-    hi_color = s.get("highlight_color", base_color) if _RICH["enabled"] else base_color
+    # 参考图逻辑：正文白字（浅），关键词金黄（深），靠同色系深浅区分。
+    base_color = _color(s, "text")
+    hi_color = s.get("highlight_color", _color(s, "accent")) if _RICH["enabled"] else base_color
 
     # 标出哪些位置属于高亮词
     hi_mask = [False] * len(text)

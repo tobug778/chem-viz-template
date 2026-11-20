@@ -34,21 +34,21 @@ style:
   font_formula_long: 22
 
   # ---- 富文字特效（可选，默认关闭）----
-  # 加强版：高亮词改冷色青绿，与金黄标题拉开对比；描边提亮加粗；标题放大。
-  # 想回到克制风格：highlight_color 改回 "#FFD166"、gold_outline 改回 "#6B4410"、
-  # outline_width 改回 1.2、heading_boost 改回 1.12；或把 rich_text 改回 false。
+  # 暖色深浅版（参考启源化学）：正文白字，关键词染饱和金黄，靠"白→金"同色系深浅区分；
+  # 大标题用金字配深棕描边做立体。不引入冷色，保持沉稳。
+  # 想回到纯清爽风格就把 rich_text 改回 false。
   rich_text: true
-  highlight_words:            # 出现即染色的关键词
+  highlight_words:            # 出现即染色的关键词（染成 highlight_color 金黄）
     - "200 个大气压"
     - "反应就停止"
     - "产率"
     - "减弱"
     - "抵消"
     - "气体少"
-  highlight_color: "#6FE8D8" # 高亮词颜色（青绿，与金黄 accent 强对比）
-  gold_outline: "#C98A2E"    # 大标题描边色（暖金，比深棕更显轮廓）
-  outline_width: 2.6         # 描边粗细（1.2 偏细，2.6 立体感更明显）
-  heading_boost: 1.18        # 大标题放大系数（字号层次）
+  highlight_color: "#FFC857" # 高亮词=饱和金黄（与正文白字拉开深浅层次）
+  gold_outline: "#6B4410"    # 金字标题的深棕描边（立体感，不抢眼）
+  outline_width: 1.5         # 描边粗细（克制）
+  heading_boost: 1.12        # 大标题放大系数（温和字号层次）
 
   # ---- 入场动态（可选，默认关闭）----
   # 打开后：画面元素逐层浮现 + 字幕逐字出现（打字机感），更有节奏。
