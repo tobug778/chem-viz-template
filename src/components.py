@@ -32,6 +32,7 @@ _RICH = {
     "words": [],
     "color": None,
     "outline": None,
+    "outline_width": 1.2,
     "heading_boost": 1.0,
 }
 
@@ -42,12 +43,14 @@ def configure_rich(style):
     - highlight_words:  出现即染色的关键词列表
     - highlight_color:  高亮颜色（缺省用 accent）
     - gold_outline:     标题描边色（缺省 None，不描边）
+    - outline_width:    描边粗细（缺省 1.2；加强版可用 2.4~3.0）
     - heading_boost:    开启特效时大标题放大系数（如 1.15），制造字号层次
     """
     _RICH["enabled"] = bool(style.get("rich_text", False))
     _RICH["words"] = list(style.get("highlight_words", []))
     _RICH["color"] = style.get("highlight_color", style.get("accent", "#FFC857"))
     _RICH["outline"] = style.get("gold_outline")
+    _RICH["outline_width"] = float(style.get("outline_width", 1.2))
     _RICH["heading_boost"] = float(style.get("heading_boost", 1.0))
 
 
@@ -77,7 +80,7 @@ def txt(text, size, color, bold=False, max_width=None, outline=False):
         # 2) 描边立体 + 3) 字号层次（放大）：仅大标题按需开启
         if outline and _RICH["outline"]:
             kwargs["stroke_color"] = _RICH["outline"]
-            kwargs["stroke_width"] = 1.2
+            kwargs["stroke_width"] = _RICH["outline_width"]
     t = Text(text, **kwargs)
     limit = SAFE_W if max_width is None else max_width
     if hasattr(t, "width") and t.width > limit:

@@ -34,8 +34,9 @@ style:
   font_formula_long: 22
 
   # ---- 富文字特效（可选，默认关闭）----
-  # 打开后：关键词自动标黄 + 大标题描边立体 + 标题放大，更接近参考片的"丰富感"。
-  # 想回到清爽风格就把 rich_text 改回 false。
+  # 加强版：高亮词改冷色青绿，与金黄标题拉开对比；描边提亮加粗；标题放大。
+  # 想回到克制风格：highlight_color 改回 "#FFD166"、gold_outline 改回 "#6B4410"、
+  # outline_width 改回 1.2、heading_boost 改回 1.12；或把 rich_text 改回 false。
   rich_text: true
   highlight_words:            # 出现即染色的关键词
     - "200 个大气压"
@@ -44,9 +45,10 @@ style:
     - "减弱"
     - "抵消"
     - "气体少"
-  highlight_color: "#FFD166" # 高亮词颜色（暖金，比强调色更亮）
-  gold_outline: "#6B4410"    # 大标题描边色（深棕，立体感）
-  heading_boost: 1.12        # 大标题放大系数（字号层次）
+  highlight_color: "#6FE8D8" # 高亮词颜色（青绿，与金黄 accent 强对比）
+  gold_outline: "#C98A2E"    # 大标题描边色（暖金，比深棕更显轮廓）
+  outline_width: 2.6         # 描边粗细（1.2 偏细，2.6 立体感更明显）
+  heading_boost: 1.18        # 大标题放大系数（字号层次）
 
   # ---- 入场动态（可选，默认关闭）----
   # 打开后：画面元素逐层浮现 + 字幕逐字出现（打字机感），更有节奏。
