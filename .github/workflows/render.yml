@@ -125,10 +125,9 @@ jobs:
             当前最新成片：**${{ env.VIDEO_NAME }}**
 
             - 网页下载：打开本页，点下方 `Assets` 里的 mp4 即可下载
-            - 直链（可当书签）：`https://github.com/${{ github.repository }}/releases/latest/download/${{ env.VIDEO_NAME }}`
-            - 备用固定直链（文件名恒定）：`https://github.com/${{ github.repository }}/releases/latest/download/latest.mp4`
+            - **固定直链（推荐收藏）**：`https://github.com/${{ github.repository }}/releases/latest/download/latest.mp4`
 
-            每期文件名按期号+主题命名（如 `04_盐的水解.mp4`）；`latest.mp4` 是同一个文件的固定名副本，方便脚本/书签长期引用。
+            `latest.mp4` 就是本期成片（`${{ env.VIDEO_NAME }}`），文件名恒定、永远指向最新一期，适合长期收藏。网页上的期号_主题文件因 GitHub 对中文文件名的限制会显示为 `${{ env.EPISODE_NO }}_.mp4`，内容相同，用 `latest.mp4` 最稳妥。
           files: |
             release/${{ env.VIDEO_NAME }}
             release/latest.mp4
