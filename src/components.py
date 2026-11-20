@@ -9,7 +9,7 @@ import numpy as np
 from manim import (
     VGroup, Text, Dot, Rectangle, RoundedRectangle, Line, Circle,
     DashedLine, VMobject, UP, DOWN, LEFT, RIGHT,
-    FadeIn, LaggedStart, ValueTracker, always_redraw,
+    FadeIn, FadeOut, LaggedStart, Transform, ValueTracker, always_redraw,
     GrowFromEdge, Rotate, Create,
 )
 
@@ -241,6 +241,169 @@ def particle_panel(cfg, seg, compressed=False):
     return VGroup(formula, panel, dots, sub)
 
 
+# ---------- 球棍分子微观过程（盐的水解：醋酸根夺 H⁺）----------
+# 参考启源化学"放大到分子"：画能认出来的球棍分子 + 用圆圈高亮标出
+# 正在反应的原子，动态演示"夺走 H⁺ → 断键 → 生成新分子"，而不是一团散点。
+def _atom(pos, radius, color, opacity=1.0):
+    """单个原子球：pos 为 (x,y)，用 Dot 近似球棍模型的球。"""
+    d = Dot(point=[pos[0], pos[1], 0.0], radius=radius, color=color)
+    return d
+
+
+def _bond(p1, p2, color, width=3.0):
+    """一根化学键：两点之间连线。"""
+    return Line([p1[0], p1[1], 0.0], [p2[0], p2[1], 0.0],
+                stroke_width=width, color=color)
+
+
+def _water_molecule(center, size, col_o, col_h):
+    """水分子 H₂O 球棍：中心 O（大）+ 两个 H（小）呈 V 形。
+    返回 (VGroup, O位置, [H位置...], [H球对象...])，H 球对象供动画里"夺走"后淡出。"""
+    cx, cy = center
+    r = size
+    pos_o = (cx, cy)
+    pos_h1 = (cx - 0.9 * r, cy + 0.8 * r)
+    pos_h2 = (cx + 0.9 * r, cy + 0.8 * r)
+    dot_h1 = _atom(pos_h1, r * 0.52, col_h)
+    dot_h2 = _atom(pos_h2, r * 0.52, col_h)
+    g = VGroup()
+    g.add(_bond(pos_o, pos_h1, col_o, 2.6), _bond(pos_o, pos_h2, col_o, 2.6))
+    g.add(_atom(pos_o, r, col_o), dot_h1, dot_h2)
+    return g, pos_o, [pos_h1, pos_h2], [dot_h1, dot_h2]
+
+
+def _acetate_molecule(center, size, col_c, col_o, col_h):
+    """醋酸根 CH₃COO⁻ 简化球棍：甲基碳 + 羧基两氧，末端带负电。返回 VGroup。"""
+    cx, cy = center
+    r = size
+    c_methyl = (cx - 0.75 * r, cy)             # 甲基碳
+    c_carboxyl = (cx + 0.55 * r, cy)           # 羧基碳
+    o_top = (cx + 1.35 * r, cy + 0.75 * r)     # 羧基氧 1（将被 H⁺ 结合）
+    o_bot = (cx + 1.35 * r, cy - 0.75 * r)     # 羧基氧 2（带负电）
+    g = VGroup()
+    # 碳骨架键
+    g.add(_bond(c_methyl, c_carboxyl, col_c, 3.2))
+    g.add(_bond(c_carboxyl, o_top, col_c, 3.0), _bond(c_carboxyl, o_bot, col_c, 3.0))
+    # 甲基上的三个氢（V 形三点）
+    for hpos in [(c_methyl[0] - 0.6 * r, cy + 0.85 * r),
+                 (c_methyl[0] - 1.0 * r, cy),
+                 (c_methyl[0] - 0.6 * r, cy - 0.85 * r)]:
+        g.add(_bond(c_methyl, hpos, col_c, 2.2), _atom(hpos, r * 0.42, col_h))
+    g.add(_atom(c_methyl, r * 0.9, col_c), _atom(c_carboxyl, r * 0.9, col_c))
+    g.add(_atom(o_top, r * 0.85, col_o), _atom(o_bot, r * 0.85, col_o))
+    return g, o_top
+
+
+def micro_process(cfg, seg):
+    """段2 微观过程静态骨架：面板 + 一对球棍分子（水、醋酸根）+ 公式 + 图注 + 负电荷标记。
+
+    真正的"夺 H⁺ 动态"在 micro_process_anim() 里做。这里只返回入场后的静态对象，
+    并把可动部件（水的某个 H、高亮圈、产物标签）挂到 group 属性上供动画引用。
+    """
+    s = cfg["style"]
+    col_o = _color(s, "ox")       # 氧：橙红
+    col_c = _color(s, "n2o4")     # 碳：灰蓝
+    col_h = _color(s, "text")     # 氢：白
+    col_neg = _color(s, "nitro")  # 负电荷：蓝
+    small = _fs(s, "font_small", 18)
+
+    panel = Rectangle(
+        width=3.7, height=2.35,
+        stroke_color=_color(s, "panel_line"), stroke_width=1.5,
+        fill_color=_color(s, "panel"), fill_opacity=0.5,
+    )
+    panel.move_to([0, 0.55, 0])
+
+    # 反应物摆在面板内：醋酸根偏左，水分子偏右
+    water, o_pos, h_positions, h_dots = _water_molecule((1.05, 0.85), 0.20, col_o, col_h)
+    acetate, o_top = _acetate_molecule((-1.05, 0.75), 0.20, col_c, col_o, col_h)
+
+    formula = txt(seg["formula"], _fs(s, "font_formula_long", 24), _color(s, "text"), bold=True)
+    formula.move_to([0, 2.45, 0])
+    sub = txt(seg["sub"], _fs(s, "font_accent", 26), _color(s, "accent"))
+    sub.move_to([0, -1.35, 0])
+
+    # 图例：球棍颜色说明（参照参考图底部 NO₂/N₂O₄ 图例）
+    legend_w = txt("H₂O  水分子", small, _color(s, "text_dim"))
+    legend_a = txt("CH₃COO⁻  醋酸根", small, _color(s, "text_dim"))
+    legend_w.move_to([-1.05, -0.55, 0])
+    legend_a.move_to([1.05, -0.55, 0])
+
+    # 醋酸根负电荷标记（放在带负电的羧基氧 o_bot 旁）
+    neg_pos = (-1.05 + 1.35 * 0.20, 0.75 - 0.75 * 0.20)
+    neg = txt("⁻", small * 1.2, col_neg).next_to(
+        Dot(point=[neg_pos[0], neg_pos[1], 0.0]), RIGHT, buff=0.04)
+
+    g = VGroup(formula, panel, water, acetate, sub, legend_w, legend_a, neg)
+    # 挂可动部件供动画引用：被夺的 H（水左侧那个）、受体氧（醋酸根羧基氧）
+    g.h_flash = h_positions[0]
+    g.h_donor = h_dots[0]        # 被夺走的那个白色 H 球，动画里淡出（水→OH⁻）
+    g.neg_mark = neg             # 醋酸根负电荷，结合 H⁺ 后淡出
+    g.acetate_o = o_top
+    g.col_accent = _color(s, "accent")
+    g.col_o = col_o
+    g.col_h = col_h
+    return g
+
+
+def micro_process_anim(cfg, seg, group):
+    """动态过程（球棍图示化，非散点）：
+    ① 金黄高亮圈圈住水的 H → ② H⁺ 从水分子飞出 → ③ 飞向醋酸根羧基氧 →
+    ④ 高亮圈转移到结合位点 → ⑤ 标注产物 CH₃COOH / OH⁻ → ⑥ 结论点题显碱性。
+
+    返回 (steps, created)：
+      steps   = [(anims, run_time), ...]，场景逐条 play；只用 Create/FadeIn/FadeOut/
+                Transform，均为 mock 与真实 Manim 都支持的动画。
+      created = 动画中新建的全部对象，供退场时统一 FadeOut 清理。
+    """
+    s = cfg["style"]
+    small = _fs(s, "font_small", 18)
+    accent = group.col_accent
+    col_o, col_h = group.col_o, group.col_h
+
+    hf = group.h_flash          # 起点：水的左侧 H
+    ao = group.acetate_o        # 终点：醋酸根羧基氧
+
+    # ① 圈住即将被夺走的 H
+    halo_h = Circle(radius=0.17, stroke_color=accent, stroke_width=2)
+    halo_h.move_to([hf[0], hf[1], 0.0])
+
+    # ② 飞行的 H⁺（金黄，区别于普通白 H）+ 标签
+    flying = Dot(point=[hf[0], hf[1], 0.0], radius=0.12, color=accent)
+    hlabel = txt("H⁺", small, accent, bold=True).next_to(flying, UP, buff=0.06)
+    # 终态：飞到受体氧处
+    flying_target = Dot(point=[ao[0], ao[1], 0.0], radius=0.12, color=accent)
+    hlabel_target = txt("H⁺", small, accent, bold=True).next_to(flying_target, UP, buff=0.06)
+
+    # ④ 结合位点高亮圈
+    halo_accept = Circle(radius=0.19, stroke_color=accent, stroke_width=2)
+    halo_accept.move_to([ao[0], ao[1], 0.0])
+
+    # ⑤ 产物图示化标注
+    lbl_acid = txt("→ CH₃COOH  醋酸分子", small, accent, bold=True)
+    lbl_acid.move_to([-1.15, -0.98, 0])
+    lbl_oh = txt("→ OH⁻  氢氧根", small, _color(s, "nitro"), bold=True)
+    lbl_oh.move_to([1.15, -0.98, 0])
+
+    # ⑥ 结论
+    conclusion = txt(seg.get("conclusion", "c(OH⁻) > c(H⁺) → 显碱性"),
+                     _fs(s, "font_accent", 26), accent, bold=True)
+    conclusion.move_to([0, -2.15, 0])
+
+    steps = [
+        ([Create(halo_h)], 0.5),                                   # ① 圈出被夺的 H
+        ([FadeIn(flying), FadeIn(hlabel)], 0.4),                    # ② H⁺ 现身
+        ([Transform(flying, flying_target),                         # ③ 飞向醋酸根：
+          Transform(hlabel, hlabel_target),                         #    原白 H 消失(水→OH⁻)，
+          FadeOut(group.h_donor), FadeOut(group.neg_mark)], 1.4),   #    负电荷消失(已成醋酸)
+        ([FadeOut(halo_h), Create(halo_accept)], 0.5),              # ④ 高亮转移=成键
+        ([FadeIn(lbl_acid), FadeIn(lbl_oh)], 0.6),                  # ⑤ 产物标注
+        ([FadeIn(conclusion)], 0.6),                                # ⑥ 结论点题
+    ]
+    created = [halo_h, flying, hlabel, halo_accept, lbl_acid, lbl_oh, conclusion]
+    return steps, created
+
+
 def equilibrium(cfg, seg):
     """段3：正逆反应速率曲线，收敛到 v正=v逆≠0。"""
     s = cfg["style"]
@@ -464,9 +627,16 @@ def bars_anim_parts(cfg, seg):
         lab = txt(label, sm, _color(s, "text_dim"))
         lab.move_to([cx, base_y - 0.22, 0])
 
-        # 数值标注：贴近各自柱顶，字体用对应柱色区分（反应物暖色/生成物金黄）
-        va = _fmt_num(stage[3]) if len(stage) > 3 else _fmt_num(h_a)
-        vb = _fmt_num(stage[4]) if len(stage) > 4 else _fmt_num(h_b)
+        # 柱顶标注（配置驱动，仅本主题生效，不跨主题复用）：
+        #   bar_top_labels: ["H⁺", "OH⁻"]  → 柱顶显示化学式（盐的水解：橙=H⁺，蓝=OH⁻）
+        #   未配置 → 回退到 stage 可选数值 / 柱高数字（合成氨、原电池、第一期照旧）
+        top_labels = seg.get("bar_top_labels") or []
+        if top_labels:
+            va = str(top_labels[0]) if len(top_labels) > 0 else ""
+            vb = str(top_labels[1]) if len(top_labels) > 1 else ""
+        else:
+            va = _fmt_num(stage[3]) if len(stage) > 3 else _fmt_num(h_a)
+            vb = _fmt_num(stage[4]) if len(stage) > 4 else _fmt_num(h_b)
         na = txt(va, sm, col_a, bold=True)
         na.next_to(b1, UP, buff=0.08)
         nb = txt(vb, sm, _color(s, "text"), bold=True)

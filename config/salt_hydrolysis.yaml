@@ -63,7 +63,9 @@ segments:
     line2: "一定中性吗？"
     gas_color: "nitro"       # 注射器装蓝液体（代表盐溶液）
 
-  # ---- 02 微观视角：离子与水抢 H⁺/OH⁻ ----
+  # ---- 02 微观视角：球棍分子动态演示醋酸根夺 H⁺（图示化，不是散点）----
+  # micro: true 切换为"水分子靠近→断键→H⁺飞向醋酸根→生成醋酸+OH⁻"的动态过程。
+  # 其它主题 particle 段不带 micro 字段，仍走原来的散点压缩动画，互不影响。
   - kind: particle
     dur: 12
     transition:
@@ -74,6 +76,9 @@ segments:
     formula: "CH₃COO⁻ + H₂O ⇌ CH₃COOH + OH⁻"
     sub: "02  弱酸根抢走 H⁺"
     caption: "弱酸根抢水电离的 H⁺，剩下 OH⁻"
+    micro: true
+    # 结论：微观过程结束后浮现，点明"为什么显碱性"
+    conclusion: "c(OH⁻) > c(H⁺) → 显碱性"
     particles:
       a:                    # 反应物（弱酸根），反应后减少
         color: "nitro"
@@ -125,8 +130,11 @@ segments:
       - ["强酸弱碱盐", 2.0, 0.4]
       - ["强碱弱酸盐", 0.4, 2.0]
     bar_swatches: ["nitro", "nh3", "ox"]
-    bar_color_a: "ox"        # 酸性柱（橙红）
-    bar_color_b: "nitro"     # 碱性柱（蓝）
+    bar_color_a: "ox"        # 酸性柱（橙红，代表 H⁺）
+    bar_color_b: "nitro"     # 碱性柱（蓝，代表 OH⁻）
+    # 柱顶标注：本期橙色=H⁺、蓝色=OH⁻，改用化学式而非复用浓度数字。
+    # 这是"每段配置"，只影响本段；其它主题不写该字段，柱顶仍是数字，不会串味。
+    bar_top_labels: ["H⁺", "OH⁻"]
 
   # ---- 05 规律原理：谁弱谁水解，谁强显谁性 ----
   - kind: lechatelier

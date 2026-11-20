@@ -173,3 +173,42 @@ assert type(cap_chars) is type(cap_plain), \
     "caption_chars 必须与 caption 同为整句 Text，不能是逐字 VGroup（叠字根因）"
 assert getattr(cap_chars, "t", None) == SAMPLE, "字幕文本应保持完整整句"
 print("字幕整句 Text（无逐字重排/叠字）✅")
+
+# --- 回归：盐的水解球棍微观过程 + 柱顶化学式（本期新需求）---
+# 1) micro 段应构建出球棍分子骨架，并带可动部件属性
+os.environ["EPISODE"] = "salt_hydrolysis"
+cfg_s = ep.load_config("salt_hydrolysis")
+seg_micro = next(x for x in cfg_s["segments"] if x.get("micro"))
+assert seg_micro["kind"] == "particle", "micro 开关应挂在 particle 段"
+comp.configure_rich(cfg_s["style"])
+mg = comp.micro_process(cfg_s, seg_micro)
+for attr in ("h_flash", "acetate_o", "col_accent"):
+    assert hasattr(mg, attr), "球棍骨架缺可动属性 " + attr
+steps, created = comp.micro_process_anim(cfg_s, seg_micro, mg)
+assert len(steps) >= 5, "夺 H⁺ 动态步骤过少"
+assert len(created) >= 6, "微观过程产物对象过少"
+anims_used = [type(a).__name__ for st, _ in steps for a in st]
+assert "Transform" in anims_used, "缺 H⁺ 飞向醋酸根的 Transform 动画"
+assert "Create" in anims_used, "缺高亮圈 Create 动画"
+print("球棍微观过程（动态夺H⁺ + 高亮圈）✅ steps=%d" % len(steps))
+
+# 2) 跑通盐的水水解整条 construct，确保 micro 分支在场景里被触发且时长正常
+sc_s = ep.Episode(); sc_s.construct()
+anims_s = [e[1] for e in sc_s.events if e[0] == "play"]
+assert "Transform" in anims_s and "Create" in anims_s, "场景未播放微观过程动画"
+t_s = total_time(sc_s)
+assert 50 <= t_s <= 70, "盐的水解时长异常: %.1f" % t_s
+print("盐的水水解 construct ✅ 时长 %.1fs / Transform=%d" % (
+    t_s, anims_s.count("Transform")))
+
+# 3) 柱顶标注：配置驱动。本期 H⁺/OH⁻；其它主题不写该字段 -> 仍用数字
+assert seg_micro is not None
+seg_bars = next(x for x in cfg_s["segments"] if x["kind"] == "bars")
+assert seg_bars.get("bar_top_labels") == ["H⁺", "OH⁻"], "本期柱顶应为化学式"
+for other in ["haber_ammonia", "galvanic_cell", "no2_equilibrium"]:
+    cfg_o = ep.load_config(other)
+    for seg in cfg_o["segments"]:
+        if seg["kind"] == "bars":
+            assert not seg.get("bar_top_labels"), \
+                "%s 不应有 bar_top_labels（避免串味）" % other
+print("柱顶标注配置驱动（仅盐的水解用化学式，其它主题不串味）✅")

@@ -24,6 +24,7 @@ from components import (
     BUILDERS, top_bar, progress_track, progress_fill, caption, caption_chars,
     particle_panel, equilibrium_anim, bars_anim_parts, chapter_transition,
     configure_rich, configure_motion, reveal,
+    micro_process, micro_process_anim,
 )
 from components import _MOTION
 
@@ -102,7 +103,17 @@ class Episode(Scene):
             # 关键节奏修复：字幕要紧跟画面立即出现，等待统一放到字幕之后，
             # 否则会出现"画面出来了，文字要等好几秒才冒出来"的拖沓感。
             pending = None
-            if kind == "particle":
+            if kind == "particle" and seg.get("micro"):
+                # 微观过程（盐的水解）：球棍分子 + 夺 H⁺ 动态 + 高亮圈 + 结论。
+                # 由 seg.micro 开关控制，其它主题 particle 段仍走下面的散点压缩，
+                # 互不影响。动画步骤在字幕之后统一播放（见 2b）。
+                visual = micro_process(cfg, seg)
+                reveal(self, visual, run_time=T_IN)
+                seg_objects.append(visual)
+                seg_used += T_IN
+                elapsed += T_IN
+                pending = "micro"
+            elif kind == "particle":
                 visual = particle_panel(cfg, seg, compressed=False)
                 reveal(self, visual, run_time=T_IN)
                 seg_objects.append(visual)
@@ -188,6 +199,15 @@ class Episode(Scene):
                 seg_used += 1.0
                 visual = compressed
                 seg_objects.append(visual)
+
+            # ---- 2b-2. micro 延后动作：字幕出现后再播放夺 H⁺ 动态过程 ----
+            if pending == "micro":
+                steps, created = micro_process_anim(cfg, seg, visual)
+                for anims, rt in steps:
+                    self.play(*anims, run_time=rt)
+                    seg_used += rt
+                    elapsed += rt
+                seg_objects.extend(created)
 
             # ---- 2c. 统一停留：字幕/动画都就位后一起停留，补足本段时长 ----
             # 修复：这里用 seg_used（本段已用），不是全局 elapsed。
