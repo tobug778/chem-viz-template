@@ -244,19 +244,60 @@ def particle_panel(cfg, seg, compressed=False):
 # ---------- 球棍分子微观过程（盐的水解：醋酸根夺 H⁺）----------
 # 参考启源化学"放大到分子"：画能认出来的球棍分子 + 用圆圈高亮标出
 # 正在反应的原子，动态演示"夺走 H⁺ → 断键 → 生成新分子"，而不是一团散点。
-def _atom(pos, radius, color, opacity=1.0):
-    """单个原子球：pos 为 (x,y)，用 Dot 近似球棍模型的球。"""
-    d = Dot(point=[pos[0], pos[1], 0.0], radius=radius, color=color)
-    return d
+# 质感：立体球用"暗边 + 主体 + 环境反光 + 双层高光"多层叠加，
+#       化学键用"暗底 + 亮高光"双线模拟圆柱，避免纯色扁圆像塑料贴片。
+def _scale_color(hex_color, factor):
+    """把 #RRGGBB 按比例提亮(>1)或压暗(<1)，越界钳制到 0~255。"""
+    h = (hex_color or "#FFFFFF").lstrip("#")
+    try:
+        rgb = [int(h[i:i + 2], 16) for i in (0, 2, 4)]
+        rgb = [max(0, min(255, int(c * factor))) for c in rgb]
+        return "#%02X%02X%02X" % tuple(rgb)
+    except Exception:
+        return hex_color
 
 
-def _bond(p1, p2, color, width=3.0):
-    """一根化学键：两点之间连线。"""
-    return Line([p1[0], p1[1], 0.0], [p2[0], p2[1], 0.0],
-                stroke_width=width, color=color)
+def _atom(pos, radius, color, opacity=1.0, glow=True):
+    """立体光泽球：外发光晕 + 边缘暗化环 + 主体 + 下方环境反光 + 左上双层高光。
+    参考启源化学分子图：每个原子球带柔和辉光、有体积感，不是纯色扁圆。
+    pos 为 (x,y)。返回 VGroup（不再是单个 Dot），FadeOut/Transform 同样适用。"""
+    x, y = pos[0], pos[1]
+    g = VGroup()
+    # 外发光晕（大而淡的同色圆，营造参考图那种"发光分子"氛围）
+    if glow:
+        g.add(Dot(point=[x, y, 0.0], radius=radius * 1.85,
+                  color=color, fill_opacity=0.10 * opacity))
+        g.add(Dot(point=[x, y, 0.0], radius=radius * 1.42,
+                  color=color, fill_opacity=0.14 * opacity))
+    # 边缘暗化 + 轻微投影（让球从面板里"凸"出来）
+    g.add(Dot(point=[x, y - radius * 0.06, 0.0], radius=radius * 1.10,
+              color=_scale_color(color, 0.40), fill_opacity=0.9 * opacity))
+    # 主体球
+    g.add(Dot(point=[x, y, 0.0], radius=radius, color=color, fill_opacity=opacity))
+    # 下方环境反光（很淡，模拟地面反射）
+    g.add(Dot(point=[x + radius * 0.18, y - radius * 0.34, 0.0],
+              radius=radius * 0.46, color=_scale_color(color, 1.28),
+              fill_opacity=0.18 * opacity))
+    # 左上软高光 + 高光核心亮点（玻璃/树脂质感的关键）
+    g.add(Dot(point=[x - radius * 0.30, y + radius * 0.32, 0.0],
+              radius=radius * 0.38, color="#FFFFFF", fill_opacity=0.45 * opacity))
+    g.add(Dot(point=[x - radius * 0.34, y + radius * 0.38, 0.0],
+              radius=radius * 0.14, color="#FFFFFF", fill_opacity=0.95 * opacity))
+    return g
 
 
-def _water_molecule(center, size, col_o, col_h):
+def _bond(p1, p2, color, width=4.0):
+    """圆柱质感化学键：较粗的暗底 + 偏上的细亮线，模拟管的立体反光。"""
+    g = VGroup()
+    g.add(Line([p1[0], p1[1], 0.0], [p2[0], p2[1], 0.0],
+               stroke_width=width, color=_scale_color(color, 0.62)))
+    off = 0.018
+    g.add(Line([p1[0], p1[1] + off, 0.0], [p2[0], p2[1] + off, 0.0],
+               stroke_width=max(1.0, width * 0.34), color=_scale_color(color, 1.45)))
+    return g
+
+
+def _water_molecule(center, size, col_o, col_h, opacity=1.0, glow=True):
     """水分子 H₂O 球棍：中心 O（大）+ 两个 H（小）呈 V 形。
     返回 (VGroup, O位置, [H位置...], [H球对象...])，H 球对象供动画里"夺走"后淡出。"""
     cx, cy = center
@@ -264,15 +305,15 @@ def _water_molecule(center, size, col_o, col_h):
     pos_o = (cx, cy)
     pos_h1 = (cx - 0.9 * r, cy + 0.8 * r)
     pos_h2 = (cx + 0.9 * r, cy + 0.8 * r)
-    dot_h1 = _atom(pos_h1, r * 0.52, col_h)
-    dot_h2 = _atom(pos_h2, r * 0.52, col_h)
+    dot_h1 = _atom(pos_h1, r * 0.52, col_h, opacity, glow)
+    dot_h2 = _atom(pos_h2, r * 0.52, col_h, opacity, glow)
     g = VGroup()
     g.add(_bond(pos_o, pos_h1, col_o, 2.6), _bond(pos_o, pos_h2, col_o, 2.6))
-    g.add(_atom(pos_o, r, col_o), dot_h1, dot_h2)
+    g.add(_atom(pos_o, r, col_o, opacity, glow), dot_h1, dot_h2)
     return g, pos_o, [pos_h1, pos_h2], [dot_h1, dot_h2]
 
 
-def _acetate_molecule(center, size, col_c, col_o, col_h):
+def _acetate_molecule(center, size, col_c, col_o, col_h, opacity=1.0, glow=True):
     """醋酸根 CH₃COO⁻ 简化球棍：甲基碳 + 羧基两氧，末端带负电。返回 VGroup。"""
     cx, cy = center
     r = size
@@ -288,9 +329,11 @@ def _acetate_molecule(center, size, col_c, col_o, col_h):
     for hpos in [(c_methyl[0] - 0.6 * r, cy + 0.85 * r),
                  (c_methyl[0] - 1.0 * r, cy),
                  (c_methyl[0] - 0.6 * r, cy - 0.85 * r)]:
-        g.add(_bond(c_methyl, hpos, col_c, 2.2), _atom(hpos, r * 0.42, col_h))
-    g.add(_atom(c_methyl, r * 0.9, col_c), _atom(c_carboxyl, r * 0.9, col_c))
-    g.add(_atom(o_top, r * 0.85, col_o), _atom(o_bot, r * 0.85, col_o))
+        g.add(_bond(c_methyl, hpos, col_c, 2.2), _atom(hpos, r * 0.42, col_h, opacity, glow))
+    g.add(_atom(c_methyl, r * 0.9, col_c, opacity, glow),
+          _atom(c_carboxyl, r * 0.9, col_c, opacity, glow))
+    g.add(_atom(o_top, r * 0.85, col_o, opacity, glow),
+          _atom(o_bot, r * 0.85, col_o, opacity, glow))
     return g, o_top
 
 
@@ -313,8 +356,23 @@ def micro_process(cfg, seg):
         fill_color=_color(s, "panel"), fill_opacity=0.5,
     )
     panel.move_to([0, 0.55, 0])
+    # 面板质感：顶部一条细高光 + 底部一条暗边，模拟玻璃面板的立体边缘
+    top_gloss = Line([-1.83, 1.70, 0], [1.83, 1.70, 0],
+                     stroke_width=1.5, color=_scale_color(_color(s, "panel_line"), 1.35))
+    bot_shade = Line([-1.83, -0.60, 0], [1.83, -0.60, 0],
+                     stroke_width=1.5, color=_scale_color(_color(s, "panel"), 0.55))
+    panel_deco = VGroup(top_gloss, bot_shade)
 
-    # 反应物摆在面板内：醋酸根偏左，水分子偏右
+    # 背景分子群（淡化、静态）：营造"溶液里大量分子"的空间氛围，参考图那种真实感。
+    # 只在面板边缘散布、低透明度、无辉光，确保不抢中间的主反应分子。
+    bg = VGroup()
+    bg_positions = [(-1.5, 1.45), (-0.5, 1.52), (0.55, 1.48),
+                    (1.5, 1.42), (-1.45, 0.25), (1.45, 0.25)]
+    for k, bp in enumerate(bg_positions):
+        bw, _, _, _ = _water_molecule(bp, 0.115, col_o, col_h, opacity=0.26, glow=False)
+        bg.add(bw)
+
+    # 反应物主角摆在面板内：醋酸根偏左，水分子偏右（带辉光立体球）
     water, o_pos, h_positions, h_dots = _water_molecule((1.05, 0.85), 0.20, col_o, col_h)
     acetate, o_top = _acetate_molecule((-1.05, 0.75), 0.20, col_c, col_o, col_h)
 
@@ -323,18 +381,30 @@ def micro_process(cfg, seg):
     sub = txt(seg["sub"], _fs(s, "font_accent", 26), _color(s, "accent"))
     sub.move_to([0, -1.35, 0])
 
-    # 图例：球棍颜色说明（参照参考图底部 NO₂/N₂O₄ 图例）
-    legend_w = txt("H₂O  水分子", small, _color(s, "text_dim"))
-    legend_a = txt("CH₃COO⁻  醋酸根", small, _color(s, "text_dim"))
-    legend_w.move_to([-1.05, -0.55, 0])
-    legend_a.move_to([1.05, -0.55, 0])
+    # 图例：球棍小示意 + 文字（参照参考图底部 NO₂/N₂O₄ 图例）
+    def _legend_icon(kind):
+        ic = VGroup()
+        if kind == "water":
+            ic.add(_atom((0, 0.06, 0), 0.055, col_o, glow=False),
+                   _atom((-0.07, 0.13, 0), 0.03, col_h, glow=False),
+                   _atom((0.07, 0.13, 0), 0.03, col_h, glow=False))
+        else:
+            ic.add(_atom((-0.05, 0, 0), 0.045, col_c, glow=False),
+                   _atom((0.06, 0.05, 0), 0.05, col_o, glow=False),
+                   _atom((0.06, -0.05, 0), 0.05, col_o, glow=False))
+        return ic
+    legend_w_icon = _legend_icon("water").move_to([-1.35, -0.52, 0])
+    legend_w = txt("H₂O  水分子", small, _color(s, "text_dim")).next_to(legend_w_icon, RIGHT, buff=0.12)
+    legend_a_icon = _legend_icon("acetate").move_to([0.35, -0.52, 0])
+    legend_a = txt("CH₃COO⁻  醋酸根", small, _color(s, "text_dim")).next_to(legend_a_icon, RIGHT, buff=0.12)
+    legend_grp = VGroup(legend_w_icon, legend_w, legend_a_icon, legend_a)
 
     # 醋酸根负电荷标记（放在带负电的羧基氧 o_bot 旁）
     neg_pos = (-1.05 + 1.35 * 0.20, 0.75 - 0.75 * 0.20)
     neg = txt("⁻", small * 1.2, col_neg).next_to(
         Dot(point=[neg_pos[0], neg_pos[1], 0.0]), RIGHT, buff=0.04)
 
-    g = VGroup(formula, panel, water, acetate, sub, legend_w, legend_a, neg)
+    g = VGroup(formula, panel, panel_deco, bg, water, acetate, sub, legend_grp, neg)
     # 挂可动部件供动画引用：被夺的 H（水左侧那个）、受体氧（醋酸根羧基氧）
     g.h_flash = h_positions[0]
     g.h_donor = h_dots[0]        # 被夺走的那个白色 H 球，动画里淡出（水→OH⁻）
@@ -368,12 +438,11 @@ def micro_process_anim(cfg, seg, group):
     halo_h = Circle(radius=0.17, stroke_color=accent, stroke_width=2)
     halo_h.move_to([hf[0], hf[1], 0.0])
 
-    # ② 飞行的 H⁺（金黄，区别于普通白 H）+ 标签
-    flying = Dot(point=[hf[0], hf[1], 0.0], radius=0.12, color=accent)
-    hlabel = txt("H⁺", small, accent, bold=True).next_to(flying, UP, buff=0.06)
-    # 终态：飞到受体氧处
-    flying_target = Dot(point=[ao[0], ao[1], 0.0], radius=0.12, color=accent)
-    hlabel_target = txt("H⁺", small, accent, bold=True).next_to(flying_target, UP, buff=0.06)
+    # ② 飞行的 H⁺（金黄立体球，区别于普通白 H）+ 标签
+    flying = _atom(hf, 0.13, accent)
+    flying_target = _atom(ao, 0.13, accent)
+    hlabel = txt("H⁺", small, accent, bold=True).move_to([hf[0], hf[1] + 0.32, 0.0])
+    hlabel_target = txt("H⁺", small, accent, bold=True).move_to([ao[0], ao[1] + 0.32, 0.0])
 
     # ④ 结合位点高亮圈
     halo_accept = Circle(radius=0.19, stroke_color=accent, stroke_width=2)
