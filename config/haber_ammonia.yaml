@@ -58,6 +58,12 @@ style:
 segments:
   - kind: hook
     dur: 5
+    # 转场环：编号 01 起，每段一个，标题按本期合成氨内容拟定（不照搬 NO₂ 原片）
+    transition:
+      number: "01"
+      title: "从空气到化肥"
+      en: "FROM AIR TO FERTILIZER"
+      dur: 1.6
     eyebrow: "平衡 · 02"
     line1: "把氮气和氢气"
     line2: "压到 200 个大气压？"
@@ -65,6 +71,11 @@ segments:
 
   - kind: particle
     dur: 12
+    transition:
+      number: "02"
+      title: "压缩那一瞬间"
+      en: "THE MOMENT OF COMPRESSION"
+      dur: 1.6
     formula: "N₂ + 3 H₂  ⇌  2 NH₃"
     sub: "01  压缩那一瞬间"
     caption: "氢氮分子变少，氨分子变多"
@@ -84,6 +95,11 @@ segments:
 
   - kind: equilibrium
     dur: 12
+    transition:
+      number: "03"
+      title: "平衡≠停止"
+      en: "DYNAMIC EQUILIBRIUM"
+      dur: 1.6
     # 动态 v-t 曲线：曲线随时间从左侧"长"出来，末端光点 + v正/v逆 文字跟随，
     # 阶段文字随进度切换（参考启源化学）。设 false 则回到静态整图。
     curve_anim: true
@@ -98,6 +114,11 @@ segments:
 
   - kind: bars
     dur: 14
+    transition:
+      number: "04"
+      title: "加压，产率升"
+      en: "PRESSURE RAISES YIELD"
+      dur: 1.6
     bar_anim: true             # 三阶段依次长出柱子+数值紧跟；false 回到静态整图
     bar_grow: 0.9              # 每阶段柱子生长时长（秒）
     moment: "刚刚加压的一瞬间"
@@ -114,12 +135,13 @@ segments:
 
   - kind: lechatelier
     dur: 9
-    # 圆环过场：一闪而过的章节页（外圈金环 + 黄蓝光点绕圈 + 大页码/标题/英文）
+    # 圆环过场：标题按本段真实内容拟（加压使平衡往气体分子数少的方向移动），
+    # 不空喊"勒夏特列原理"这个名词。原理名放在正文里点明即可。
     transition:
-      number: "04"
-      title: "减弱，不是抵消"
-      en: "WEAKEN, NOT CANCEL"
-      dur: 2.6               # 过场停留时长（秒），之后淡出进入正文
+      number: "05"
+      title: "往气体少的方向"
+      en: "TOWARD FEWER MOLECULES"
+      dur: 1.6
     label: "勒夏特列原理"
     line1: "减弱，不是抵消"
     line2: "加压 → 往气体少的方向移动"
@@ -127,6 +149,11 @@ segments:
 
   - kind: outro
     dur: 6
+    transition:
+      number: "06"
+      title: "轮到你了"
+      en: "YOUR TURN"
+      dur: 1.6
     question: "加压，氨产率怎么变？"
     opt_a: "A  提高"
     opt_b: "B  降低"
