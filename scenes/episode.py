@@ -47,10 +47,12 @@ class Episode(Scene):
         track = progress_track(cfg)
         self.add(header, track)
 
-        # ---- BGM：文件存在才配音（无文件则静音）----
-        bgm = ROOT / cfg["audio"]["bgm"]
-        if bgm.exists():
-            self.add_sound(str(bgm), gain=cfg["audio"].get("volume", 0.18))
+        # ---- BGM：默认关闭，输出无音轨纯画面；需要时在 YAML 里设 audio.enabled: true ----
+        audio_cfg = cfg.get("audio", {})
+        if audio_cfg.get("enabled", False):
+            bgm = ROOT / audio_cfg.get("bgm", "assets/bgm.mp3")
+            if bgm.exists():
+                self.add_sound(str(bgm), gain=audio_cfg.get("volume", 0.18))
 
         segs = cfg["segments"]
         total = sum(x["dur"] for x in segs)

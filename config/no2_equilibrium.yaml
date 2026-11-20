@@ -73,5 +73,8 @@ segments:
     cta: "评论区告诉我"
 
 audio:
+  # 默认无背景音乐：成片为纯画面，节奏/音乐自行后期合成。
+  # 需要自动配音时改为 true（bgm 文件需存在）。
+  enabled: false
   bgm: "assets/bgm.mp3"     # 可选；文件不存在则静音
   volume: 0.18
