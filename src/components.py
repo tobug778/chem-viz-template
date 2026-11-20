@@ -393,11 +393,16 @@ def micro_process(cfg, seg):
                    _atom((0.06, 0.05, 0), 0.05, col_o, glow=False),
                    _atom((0.06, -0.05, 0), 0.05, col_o, glow=False))
         return ic
-    legend_w_icon = _legend_icon("water").move_to([-1.35, -0.52, 0])
-    legend_w = txt("H₂O  水分子", small, _color(s, "text_dim")).next_to(legend_w_icon, RIGHT, buff=0.12)
-    legend_a_icon = _legend_icon("acetate").move_to([0.35, -0.52, 0])
-    legend_a = txt("CH₃COO⁻  醋酸根", small, _color(s, "text_dim")).next_to(legend_a_icon, RIGHT, buff=0.12)
-    legend_grp = VGroup(legend_w_icon, legend_w, legend_a_icon, legend_a)
+    # 图例：两组各自成组→整体 arrange→限宽居中。这样文字再长也不会越出画面右缘。
+    legend_w_icon = _legend_icon("water")
+    legend_w = txt("H₂O  水分子", small, _color(s, "text_dim")).next_to(legend_w_icon, RIGHT, buff=0.10)
+    legend_w_grp = VGroup(legend_w_icon, legend_w)
+    legend_a_icon = _legend_icon("acetate")
+    legend_a = txt("CH₃COO⁻  醋酸根", small, _color(s, "text_dim")).next_to(legend_a_icon, RIGHT, buff=0.10)
+    legend_a_grp = VGroup(legend_a_icon, legend_a)
+    legend_grp = VGroup(legend_w_grp, legend_a_grp).arrange(RIGHT, buff=0.30)
+    legend_grp.scale_to_fit_width(3.20)     # 面板宽 3.7，限到 3.2 留边距
+    legend_grp.move_to([0, -0.52, 0])
 
     # 醋酸根负电荷标记（放在带负电的羧基氧 o_bot 旁）
     neg_pos = (-1.05 + 1.35 * 0.20, 0.75 - 0.75 * 0.20)
@@ -448,11 +453,12 @@ def micro_process_anim(cfg, seg, group):
     halo_accept = Circle(radius=0.19, stroke_color=accent, stroke_width=2)
     halo_accept.move_to([ao[0], ao[1], 0.0])
 
-    # ⑤ 产物图示化标注
+    # ⑤ 产物图示化标注：两个标注整体排布后限宽居中，避免左端箭头/右端文字被切。
     lbl_acid = txt("→ CH₃COOH  醋酸分子", small, accent, bold=True)
-    lbl_acid.move_to([-1.15, -0.98, 0])
     lbl_oh = txt("→ OH⁻  氢氧根", small, _color(s, "nitro"), bold=True)
-    lbl_oh.move_to([1.15, -0.98, 0])
+    products_grp = VGroup(lbl_acid, lbl_oh).arrange(RIGHT, buff=0.25)
+    products_grp.scale_to_fit_width(3.60)   # 画面安全宽约 4.0，留边距
+    products_grp.move_to([0, -0.98, 0])
 
     # ⑥ 结论
     conclusion = txt(seg.get("conclusion", "c(OH⁻) > c(H⁺) → 显碱性"),
