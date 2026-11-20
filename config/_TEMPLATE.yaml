@@ -1,0 +1,122 @@
+# ============================================================
+# 化学可视化系列 · 新一期配置模板（骨架）
+# ------------------------------------------------------------
+# 用法：复制本文件 → 改名 <主题>.yaml → 按注释填写每个 transition.title/en
+#
+# 【段数可变】不强制 6 段！按主题内容实际需要增减，一般 2~6 段：
+#   - 下面每段是"可选积木"，用不上的整段删掉即可；
+#   - 剩下的段编号从 01 连续往下排，不补位、不跳号；
+#   - 最后一段固定用 outro（轮到你了），编号 = 实际段数。
+#   实测：4 段配置就出 4 个环，代码天然支持，无需改动。
+# 【标题规则】见 ~/.workbuddy/skills/chem-viz-episode-builder/SKILL.md
+# ============================================================
+meta:
+  series: "你没见过的化学"
+  episode_no: "03"          # 本期序号，递增
+  title: "<主题名>"          # 例：原电池
+  hook: "<一句话钩子>"       # 例：两块金属，怎么就产生了电流
+  watermark: false          # 固定：永不加水印
+
+style:
+  # 以下样式全系列固定，新一期直接复制，不要改
+  bg: "#0A1526"
+  panel: "#132238"
+  panel_line: "#2E4A6B"
+  text: "#EAF2FF"
+  text_dim: "#8FA8C8"
+  accent: "#FFC857"
+  no2: "#C1440E"
+  n2o4: "#9FB2C9"
+  ox: "#E8552F"
+  nitro: "#3E6FB0"
+  nh3: "#FFC857"
+  font_cn: "Noto Sans CJK SC"
+  font_small: 18
+  font_body: 24
+  font_caption: 24
+  font_accent: 28
+  font_heading: 34
+  font_formula: 30
+  font_formula_long: 22
+  rich_text: true
+  highlight_words: []        # 本期关键词，逐条填（会染成金黄）
+  highlight_color: "#FFC857"
+  gold_outline: "#6B4410"
+  outline_width: 1.5
+  heading_boost: 1.12
+  motion: true
+
+segments:
+  # ---- 段1 现象引入（可选）：抛一个反常识的现象/问题 ----
+  - kind: hook
+    dur: 5
+    transition: { number: "<按序:01>", title: "<现象钩子,≤8字>", en: "<SHORT EN PHRASE>", dur: 1.6 }
+    eyebrow: "<系列名> · <期号>"
+    line1: "<钩子第一行>"
+    line2: "<钩子第二行，常是反问>"
+    gas_color: "nitro"       # 注射器气体色：nitro蓝 / ox橙 / nh3黄
+
+  # ---- 段2 微观视角（可选）：粒子层面发生了什么 ----
+  - kind: particle
+    dur: 12
+    transition: { number: "<按序>", title: "<微观变化,≤8字>", en: "<SHORT EN PHRASE>", dur: 1.6 }
+    formula: "<反应/变化式，如 N₂ + 3 H₂ ⇌ 2 NH₃>"
+    sub: "<小标题>"
+    caption: "<一句字幕：谁变多谁变少>"
+    particles:                 # a=反应物 b=生成物
+      a: { color: "nitro", radius: 0.055, opacity: 0.9, normal: 20, compressed: 9 }
+      b: { color: "nh3",   radius: 0.045, opacity: 0.9, normal: 8,  compressed: 21 }
+
+  # ---- 段3 动态过程（可选）：随时间变化的曲线/速率 ----
+  - kind: equilibrium
+    dur: 12
+    transition: { number: "<按序>", title: "<动态本质,≤8字>", en: "<SHORT EN PHRASE>", dur: 1.6 }
+    curve_anim: true
+    curve_grow: 5.0
+    curve_stages:
+      - { at: 0.0,  text: "<起始阶段>" }
+      - { at: 0.42, text: "<中间阶段>" }
+      - { at: 0.85, text: "<最终阶段>" }
+    question: "<反问句>"
+    formula: "<关系式，如 v正 = v逆 ≠ 0>"
+    caption: "<一句字幕>"
+
+  # ---- 段4 量化结果（可选）：柱状图/数值变化 ----
+  - kind: bars
+    dur: 14
+    transition: { number: "<按序>", title: "<量化结论,≤8字>", en: "<SHORT EN PHRASE>", dur: 1.6 }
+    bar_anim: true
+    bar_grow: 0.9
+    moment: "<时刻标题>"
+    formula: "<结论式，如 c(NH₃)↑ → 产率↑>"
+    caption: "<一句字幕>"
+    bar_stages:
+      - ["<阶段1>", 1.6, 0.5]
+      - ["<阶段2>", 2.1, 0.65]
+      - ["<阶段3>", 0.7, 1.8]
+    bar_swatches: ["ox", "nh3", "nitro"]
+    bar_color_a: "nitro"
+    bar_color_b: "nh3"
+
+  # ---- 段5 规律原理（可选）：标题用画面实质，不空喊原理名 ----
+  - kind: lechatelier
+    dur: 9
+    transition: { number: "<按序>", title: "<规律实质,≤8字>", en: "<SHORT EN PHRASE>", dur: 1.6 }
+    label: "<原理名（正文里点明即可）>"
+    line1: "<核心句>"
+    line2: "<解释句>"
+    formula: "<公式/关系式>"
+
+  # ---- 末段 互动测验（固定保留）：留给观众的问题，标题固定"轮到你了" ----
+  - kind: outro
+    dur: 6
+    transition: { number: "<按序,末段>", title: "轮到你了", en: "<SHORT EN PHRASE>", dur: 1.6 }
+    question: "<测验问题>"
+    opt_a: "A  <选项>"
+    opt_b: "B  <选项>"
+    cta: "<引导语，如 评论区告诉我>"
+
+audio:
+  enabled: false             # 固定：无音轨，用户后期自行配乐
+  bgm: "assets/bgm.mp3"
+  volume: 0.18
