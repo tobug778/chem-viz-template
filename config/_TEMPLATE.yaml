@@ -38,6 +38,7 @@ style:
   font_heading: 34
   font_formula: 30
   font_formula_long: 22
+  max_hold: 1.6              # 段末静止上限(秒)：内容播完到进转场的定格时长，调小转场更快
   rich_text: true
   highlight_words: []        # 本期关键词，逐条填（会染成金黄）
   highlight_color: "#FFC857"

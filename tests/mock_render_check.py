@@ -149,15 +149,22 @@ def total_time(sc):
            sum(e[1] for e in sc.events if e[0] == "wait")
 
 t_haber = total_time(scenes["haber_ammonia"])
-print("成片估算时长: %.1f 秒（配置预算 58s）" % t_haber)
-assert 50 <= t_haber <= 70, "时长被腰斩或异常: %.1f" % t_haber
+print("成片估算时长: %.1f 秒（段末静止压缩后约 42s，配置预算 58s）" % t_haber)
+assert 35 <= t_haber <= 70, "时长被腰斩或异常: %.1f" % t_haber
 
 # 4) 每段的 wait 都应该是显式正数（bug 修复的核心标志：不再有大量 0 秒 wait 被跳过）
 waits = [e[1] for e in scenes["haber_ammonia"].events if e[0] == "wait"]
 print("所有 wait 时长:", [round(w, 2) for w in waits])
 assert all(w > 0 for w in waits), "存在 0/负 wait，stay 又被跳过了"
 
-print("\n✅ 6 环就位 / 时长恢复 ~58s / stay 不再被跳过 / 第一期不受影响")
+# 5) 段末静止（除转场环内的短 wait 与结尾 0.5）不得超过 max_hold（默认 1.6）
+max_hold = 1.6
+big_waits = [w for w in waits if w > 0.5]   # 排除转场环内 0.31 与结尾 0.5
+assert all(w <= max_hold + 1e-6 for w in big_waits), \
+    "段末静止超过 max_hold，转场空档仍太长: %s" % big_waits
+print("段末静止均 <= %.1fs（转场空档不再拖沓）✅" % max_hold)
+
+print("\n✅ 6 环就位 / 时长节奏紧凑 / stay 不再被跳过 / 第一期不受影响")
 
 # --- 回归：字幕叠字修复 ---
 # caption_chars 必须与 caption 共用同一个整句 Text（原生 t2c 高亮）。
@@ -197,7 +204,7 @@ sc_s = ep.Episode(); sc_s.construct()
 anims_s = [e[1] for e in sc_s.events if e[0] == "play"]
 assert "Transform" in anims_s and "Create" in anims_s, "场景未播放微观过程动画"
 t_s = total_time(sc_s)
-assert 50 <= t_s <= 70, "盐的水解时长异常: %.1f" % t_s
+assert 35 <= t_s <= 70, "盐的水解时长异常: %.1f" % t_s
 print("盐的水水解 construct ✅ 时长 %.1fs / Transform=%d" % (
     t_s, anims_s.count("Transform")))
 

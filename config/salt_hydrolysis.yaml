@@ -34,6 +34,10 @@ style:
   font_formula: 30
   font_formula_long: 22
 
+  # 段末静止上限（秒）：内容播完后定格多久才淡出进下一个转场环。
+  # 默认 1.6s；调小=转场更快更紧凑，调大=每段多留几秒呼吸。不写则用 1.6。
+  max_hold: 1.6
+
   rich_text: true
   highlight_words:
     - "水解"

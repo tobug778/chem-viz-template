@@ -209,16 +209,24 @@ class Episode(Scene):
                     elapsed += rt
                 seg_objects.extend(created)
 
-            # ---- 2c. 统一停留：字幕/动画都就位后一起停留，补足本段时长 ----
+            # ---- 2c. 统一停留：字幕/动画都就位后停留，补足本段时长 ----
             # 修复：这里用 seg_used（本段已用），不是全局 elapsed。
+            # 节奏优化：内容播完后的"定格干等"设上限（默认 1.6s，可用 style.max_hold 调），
+            # 避免定格好几秒才淡出进转场、拖慢观感。只压缩静止，不动任何动画/字幕/转场。
             stay = dur - seg_used - T_X - T_FADE
+            max_hold = float(cfg["style"].get("max_hold", 1.6))
+            if stay > max_hold:
+                stay = max_hold
             if stay > 0.2:
                 self.wait(stay)
                 seg_used += stay
                 elapsed += stay
 
             # ---- 3. 进度条 ----
-            fraction = min(1.0, elapsed / total)
+            # 按"名义段时长"累计，而不是实际 elapsed：段末静止被压缩后 elapsed 会变小，
+            # 用它会让进度条走不满。用名义时长保证片尾正好 1.0，且与节奏调整解耦。
+            nominal_elapsed = sum(x["dur"] for x in segs[:i + 1])
+            fraction = min(1.0, nominal_elapsed / total)
             new_fill = progress_fill(cfg, fraction)
             if fill is None:
                 fill = new_fill
